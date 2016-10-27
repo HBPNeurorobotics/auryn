@@ -127,6 +127,11 @@ void Connection::set_transmitter(TransmitterType transmitter)
 				break;
 			case GLUT:
 			case AMPA:
+				set_target(dst->get_state_vector("g_ampa"));
+				break;
+			case DEND:
+				set_target(dst->get_state_vector("dendrite"));
+				break;
 			default:
 				set_target(dst->get_default_exc_target());
 		}
