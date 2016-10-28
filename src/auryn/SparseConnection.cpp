@@ -334,10 +334,10 @@ void SparseConnection::connect_block_random(AurynWeight weight,
 		sparseness = 1.0;
 	}
 
-	if ( weight < get_min_weight() ) {
-		auryn::logger->msg("Weight smaller than minimal weight. Updating minimal weight and proceeding.",WARNING);
-		set_min_weight(weight);
-	}
+	//if ( weight < get_min_weight() ) {
+	//	auryn::logger->msg("Weight smaller than minimal weight. Updating minimal weight and proceeding.",WARNING);
+	//	set_min_weight(weight);
+	//}
 
 	int r = 0; // these variables are used to speed up building the matrix if the destination is distributed
 	int s = 1;

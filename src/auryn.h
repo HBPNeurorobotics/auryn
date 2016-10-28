@@ -72,6 +72,9 @@
 #include "auryn/TripletScalingConnection.h"
 #include "auryn/IdentityConnection.h"
 #include "auryn/AllToAllConnection.h"
+#include "auryn/PairInteractionConnection.h"
+#include "auryn/modulatedPairInteractionConnection.h"
+
 
 // Spiking and input group definitions
 #include "auryn/SpikingGroup.h"
@@ -87,11 +90,13 @@
 #include "auryn/CorrelatedPoissonGroup.h"
 #include "auryn/MovingBumpGroup.h"
 #include "auryn/AuditoryBeepGroup.h"
+#include "auryn/LinGroup.h"
 
 // NeuronGroups
 #include "auryn/IFGroup.h"
 #include "auryn/CubaIFGroup.h"
 #include "auryn/TIFGroup.h"
+#include "auryn/SIFGroup.h"
 #include "auryn/AIFGroup.h"
 #include "auryn/AIF2Group.h"
 #include "auryn/AdExGroup.h"

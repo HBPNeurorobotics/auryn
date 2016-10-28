@@ -80,6 +80,7 @@ PairInteractionConnection::~PairInteractionConnection()
 
 inline AurynWeight PairInteractionConnection::dw_fwd(NeuronID post)
 {
+  //const NeuronID post_rank = dst->global2rank(post); 
 	AurynTime diff = auryn::sys->get_clock()-last_spike_post[post];
 	if ( stdp_active ) {
 		if ( diff >= WINDOW_MAX_SIZE ) diff = WINDOW_MAX_SIZE-1;
@@ -91,13 +92,14 @@ inline AurynWeight PairInteractionConnection::dw_fwd(NeuronID post)
 
 inline AurynWeight PairInteractionConnection::dw_bkw(NeuronID pre)
 {
-	AurynTime diff = auryn::sys->get_clock()-last_spike_pre[pre];
-	if ( stdp_active ) {
-		if ( diff >= WINDOW_MAX_SIZE ) diff = WINDOW_MAX_SIZE-1;
-		double dw = window_pre_post[diff];
-		return dw;
-	}
-	else return 0.;
+//	AurynTime diff = auryn::sys->get_clock()-last_spike_pre[pre];
+//	if ( stdp_active ) {
+//		if ( diff >= WINDOW_MAX_SIZE ) diff = WINDOW_MAX_SIZE-1;
+//		double dw = window_pre_post[diff];
+//		return dw;
+//	}
+//	else return 0.;
+	return 0.;
 }
 
 inline void PairInteractionConnection::propagate_forward()
