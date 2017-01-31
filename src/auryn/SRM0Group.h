@@ -59,6 +59,9 @@ private:
 	AurynFloat scale_mem;
 	AurynFloat scale_syn;
 
+	unsigned short refractory_time;
+	auryn_vector_ushort * ref;
+	unsigned short * t_ref; 
 	/*! \brief Vector holding neuronspecific synaptic currents */
 	AurynStateVector * syn_current;
 
@@ -67,6 +70,7 @@ private:
 
 	/*! \brief Temporary vector */
 	AurynStateVector * temp;
+	AurynStateVector * bg_current;
 
 	void init();
 	void calculate_scale_constants();
@@ -78,10 +82,12 @@ public:
 
 	/*! \brief Spike sharpness parameter delta u */
 	AurynFloat delta_u;
+	AurynInt * spike_count; 
 
 	/*! The default constructor of this NeuronGroup */
 	SRM0Group(NeuronID size);
 	virtual ~SRM0Group();
+	virtual string get_output_line(NeuronID i);
 
 	/*! \brief Redraws random waiting times neuron i */
 	void draw(NeuronID i);
@@ -100,6 +106,12 @@ public:
 
 	/*! \brief Seed the random number generator of all SRM0Group instances */
 	void seed(unsigned int s);
+
+	/*! \brief Controls the constant current input (per default set so zero) to neuron i */
+	void set_bg_current(NeuronID i, AurynFloat current);
+
+	void set_refractory_period(AurynDouble t);
+
 };
 
 }

@@ -282,3 +282,7 @@ void Connection::evolve()
 {
 
 }
+
+void Connection::set_gain(double g){
+  gain =g;
+}

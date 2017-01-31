@@ -59,7 +59,7 @@ void PatternStimulator::init(NeuronGroup * target, std::string filename, AurynFl
 
 	patterns = new std::vector<type_pattern>;
 
-	mem = dst->mem;
+	mem = dst->get_state_vector("bg_current");
 
 	filetime = 0;
 	timeseriesfile.open(filename.c_str(),std::ios::in);
@@ -76,11 +76,11 @@ void PatternStimulator::propagate()
 {
 	if ( dst->evolve_locally() ) {
 
-		char buffer[256]; 
+		char buffer[55000]; 
 		std::string line;
 		while( !timeseriesfile.eof() && filetime < auryn::sys->get_clock() ) {
 			line.clear();
-			timeseriesfile.getline (buffer,255); 
+			timeseriesfile.getline (buffer,55000); 
 			// FIXME This buffer can quickly become to small of read lots of columns
 			// Instead this section should be re-written to directly read one token/column 
 			// at a time in the loop below. Just making the buffer size large should be avoided 
@@ -98,6 +98,8 @@ void PatternStimulator::propagate()
 				iss >> cur ;
 				currents[column] = newcurrents[column];
 				newcurrents[column] = cur;
+        //printf("%d:%f ",column, cur);
+        //printf("\n");
 			}
 		}
 
@@ -105,8 +107,8 @@ void PatternStimulator::propagate()
 		for ( std::vector<type_pattern>::const_iterator pattern = patterns->begin() ; 
 				pattern != patterns->end() ; ++pattern ) { 
 			for ( type_pattern::const_iterator piter = pattern->begin() ; piter != pattern->end() ; ++piter ) {
-				mem->data[piter->i] += *cur_iter * piter->gamma * scl * auryn_timestep;
-			}
+				mem->data[piter->i] = *cur_iter * piter->gamma * scl * auryn_timestep;
+			};
 			++cur_iter;
 		}
 	}
@@ -121,7 +123,7 @@ void PatternStimulator::load_1_pattern( )
 		pm.gamma = 1 ; 
 		pattern.push_back( pm ) ;
 	}
-	patterns->push_back(pattern);
+	patterns->push_back( pattern ) ;
 	currents = new AurynState[1];
 	newcurrents = new AurynState[1];
 	currents[0] = 0;

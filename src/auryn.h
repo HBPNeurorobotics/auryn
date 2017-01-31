@@ -74,8 +74,7 @@
 #include "auryn/MinimalTripletConnection.h"
 #include "auryn/IdentityConnection.h"
 #include "auryn/AllToAllConnection.h"
-#include "auryn/PairInteractionConnection.h"
-#include "auryn/modulatedPairInteractionConnection.h"
+#include "auryn/modulatedVmPlasticConnection.h"
 
 
 // Spiking and input group definitions

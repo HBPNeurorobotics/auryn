@@ -40,6 +40,7 @@ INCLUDE_DIRECTORIES( src )
 
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(examples)
+ADD_SUBDIRECTORY(experiments)
 ADD_SUBDIRECTORY(tools)
 
 # Unit tests

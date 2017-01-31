@@ -132,7 +132,7 @@ void PatternMonitor::load_patterns( std::string filename )
 		return;
 	}
 
-	char buffer[256];
+	char buffer[25600];
 	std::string line;
 
 	type_pattern pattern;
@@ -140,7 +140,7 @@ void PatternMonitor::load_patterns( std::string filename )
 	while( !fin.eof() && patterns->size() < maxpat ) {
 
 		line.clear();
-		fin.getline (buffer,255);
+		fin.getline (buffer,25599);
 		line = buffer;
 
 		if (line[0] == '#') continue;

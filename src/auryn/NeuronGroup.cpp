@@ -120,14 +120,16 @@ void NeuronGroup::set_state(std::string name, NeuronID i, AurynState val)
 {
 	AurynStateVector * tmp = find_state_vector(name);
 	if (tmp) { tmp->set(i,val); }
-	else { logger->warning("State not found."); }
+	else { logger->warning("State not found.");
+         logger->warning(name);   }
 }
 
 void NeuronGroup::set_state(std::string name, AurynState val)
 {
 	AurynStateVector * tmp = find_state_vector(name);
 	if (tmp) tmp->set_all(val);
-	else { logger->warning("State not found."); }
+	else { logger->warning("State not found."); 
+         logger->warning(name);   }
 }
 
 AurynStateVector * NeuronGroup::get_default_exc_target()

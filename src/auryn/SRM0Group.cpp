@@ -43,14 +43,14 @@ void SRM0Group::calculate_scale_constants()
 
 void SRM0Group::init()
 {
-	e_rest = -60e-3;
-	e_rev = -80e-3;
-	thr = -50e-3;
-	tau_mem = 10e-3;
-	tau_syn = 5e-3;
+	e_rest = 0e-3;
+	e_rev = 0e-3;
+	thr = 100e-3;
+	tau_mem = 1e-3;
+	tau_syn = 4e-3;
 
 	rho0 = 100.0;
-	delta_u = 1e-4;
+	delta_u = 5e-2;
 
 	calculate_scale_constants();
 	syn_current = get_state_vector("syn_current");
@@ -59,6 +59,12 @@ void SRM0Group::init()
 
 	default_exc_target_state = syn_current;
 	default_inh_target_state = syn_current;
+	bg_current = get_state_vector("bg_current");
+	set_refractory_period(4e-3);
+	ref = auryn_vector_ushort_alloc (get_vector_size());   
+	t_ref = auryn_vector_ushort_ptr ( ref , 0 ); 
+
+
 
 	dist = new boost::exponential_distribution<>(1.0);;
 	die  = new boost::variate_generator<boost::mt19937&, boost::exponential_distribution<> > ( gen, *dist );
@@ -86,6 +92,10 @@ void SRM0Group::clear()
 	clear_spikes();
     mem->set_all( e_rest);
 	draw_all();
+  spike_count = new AurynInt[get_rank_size()];
+  for (NeuronID i = 0; i < get_rank_size(); i++) {
+	   spike_count[i] = 0;     
+	}
 }
 
 
@@ -103,7 +113,7 @@ void SRM0Group::evolve()
 	// integrate membrane
     // compute current
     temp->diff(e_rest, mem); // leak current
-	temp->add(syn_current); // syn_current
+	  //temp->add(syn_current); // syn_current
 
     // membrane dynamics
     mem->saxpy(scale_mem,temp);
@@ -111,6 +121,7 @@ void SRM0Group::evolve()
 	// lifetime decrement
 	// compute instantaneous firing rate
 	temp->diff(mem,thr);
+  temp->add(bg_current);
 	temp->mul(1.0/delta_u); 
 	temp->fast_exp();
 	// temp->set_all(1.0); // for testing at fixed voltage values
@@ -122,12 +133,17 @@ void SRM0Group::evolve()
 
 	// hard refractory time (clamped to zero)
 	for (NeuronID i = 0 ; i < get_rank_size() ; ++i ) {
+    if (t_ref[i]>0) t_ref[i]-- ;
 		// stochastic spike generation TODO
 		if (warped_lifetime->get(i)<0.0) {
-			push_spike(i);
 			draw(i);
+      if(t_ref[i]==0){
+			push_spike(i);
+      spike_count[i]++;
 			mem->set(i, e_rest);
-		} 
+			t_ref[i] += refractory_time ;
+      }
+    }
 	}
 
 	syn_current->scale(scale_syn);
@@ -147,4 +163,21 @@ void SRM0Group::seed(unsigned int s)
 	auryn::logger->msg(oss.str(),NOTIFICATION);
 
 	gen.seed( s + salt );  
+}
+
+std::string SRM0Group::get_output_line(NeuronID i)
+{
+	std::stringstream oss;
+	oss << rank2global(i) << " " << spike_count[i] << "\n";
+	return oss.str();
+}
+
+void SRM0Group::set_bg_current(NeuronID i, AurynFloat current) {
+	if ( localrank(i) )
+		auryn_vector_float_set ( bg_current , global2rank(i) , current ) ;
+}
+
+void SRM0Group::set_refractory_period(double t)
+{
+	refractory_time = (unsigned short) (t/auryn_timestep);
 }

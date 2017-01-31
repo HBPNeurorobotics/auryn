@@ -101,6 +101,8 @@ protected:
 	/*! \brief 	Stores spike attribute offset in attribute array */
 	NeuronID spike_attribute_offset;
 
+  double gain = 1.0;
+
 	void init(TransmitterType transmitter=GLUT);
 
 public:
@@ -175,6 +177,9 @@ public:
 
 	/*! \brief Same as set_receptor */
 	void set_target(string state_name);
+
+	/*! \brief Same as set_receptor */
+	void set_gain(double g);
 
 	/*! \brief Same as set_receptor, but DEPRECATED */
 	void set_transmitter(string state_name);
@@ -288,7 +293,7 @@ BOOST_SERIALIZATION_ASSUME_ABSTRACT(Connection)
 inline void Connection::targeted_transmit(SpikingGroup * target_group, AurynStateVector * target_state, const NeuronID id, const AurynWeight amount) 
 {
 	const NeuronID localid = target_group->global2rank(id);
-	target_state->data[localid]+=amount;
+	target_state->data[localid]+=gain*amount;
 }
 
 inline void Connection::transmit(const NeuronID id, const AurynWeight amount) 

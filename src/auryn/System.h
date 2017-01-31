@@ -49,7 +49,7 @@
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
 
-#define PROGRESSBAR_DEFAULT_UPDATE_INTERVAL 1000
+#define PROGRESSBAR_DEFAULT_UPDATE_INTERVAL 10000
 #define LOGGER_MARK_INTERVAL (10000*1000) // 1000s
 
 namespace auryn {
@@ -191,7 +191,7 @@ namespace auryn {
 		void set_online_rate_monitor_id( unsigned int id=0 );
 
 		/*! \brief Sets the timeconstant to compute the online rate average for the status bar. */
-		void set_online_rate_monitor_tau( AurynDouble tau=100e-3 );
+		void set_online_rate_monitor_tau( AurynDouble tau=1000e-3 );
 
 		/*! \brief Returns last elapsed time in seconds. */
 		double get_last_elapsed_time();
