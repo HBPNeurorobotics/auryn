@@ -20,7 +20,6 @@ c_nsat/obj
 bin/
 evs_*_*
 env/
-build/
 develop-eggs/
 dist/
 downloads/
@@ -33,6 +32,14 @@ var/
 .installed.cfg
 *.egg
 Results/
+Results_scripts/
+script_results/
+scripts2/
+scripts/
+outputs
+inputs
+build/release/examples/
+CMakeFiles/
 __gen__*
 
 # PyInstaller
