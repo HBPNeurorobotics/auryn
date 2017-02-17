@@ -116,8 +116,8 @@ context={'ncores':4,
          'sample_duration_test' : .25, #Includes pause,
          'sample_pause_test' : 0.,
          'sigma' : 50e-3,
-         'n_samples_train' : 5000,
-         'n_samples_test' : 1000,
+         'n_samples_train' : 3000,
+         'n_samples_test' : 100,
          'n_epochs' : 1,
          'n_loop' : 1,
          'prob_syn' : 1.0,
@@ -257,19 +257,19 @@ if __name__ == '__main__':
         acc_hist.append([0, res])
         print res
 #
-    M = read_allparamters_dual(context)
-    d=et.mksavedir()
-    et.globaldata.context = context
-    et.save()
-    et.save(context, 'context.pkl')
-    et.save(sys.argv, 'sysargv.pkl')
-    et.save(M,'M.pkl')
-    et.save(bestM,'bestM.pkl')
-    et.save(acc_hist, 'acc_hist.pkl')
-    et.annotate('res',text=str(acc_hist))
+#   M = read_allparamters_dual(context)
+#   d=et.mksavedir()
+#   et.globaldata.context = context
+#   et.save()
+#   et.save(context, 'context.pkl')
+#   et.save(sys.argv, 'sysargv.pkl')
+#   et.save(M,'M.pkl')
+#   et.save(bestM,'bestM.pkl')
+#   et.save(acc_hist, 'acc_hist.pkl')
+#   et.annotate('res',text=str(acc_hist))
 
-    textannotate('last_res',text=str(acc_hist))
-    textannotate('last_dir',text=d)
+#   textannotate('last_res',text=str(acc_hist))
+#   textannotate('last_dir',text=d)
 
         
 

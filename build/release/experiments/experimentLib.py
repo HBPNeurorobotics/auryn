@@ -544,7 +544,7 @@ def create_data_rbp(
     SL = None
 
     if generate_sl:
-        rate = 1./(4e-3 + 1./(1e-32+5000*tiser[::2,1:]))
+        rate = 1./(4e-3 + 1./(1e-32+5000*tiser[:,1:]))
         print "Creating Spike Trains"
         SL = SimSpikingStimulus(rate,time=int(dur),t_sim=len(data_vectors)*dur, with_labels = with_labels)
         print "Exporting evs"
@@ -1028,7 +1028,7 @@ def exportAER(spikeLists,
     #Choose desired output: no filename given, return events
     return ev
 
-def SimSpikingStimulus(stim, time = 1000, t_sim = None, with_labels = True):
+def SimSpikingStimulus(stim, time = 1000, t_sim = None, with_labels = True, nc = 10):
     '''
     Times must be sorted. ex: times = [0, 1, 2] ; scale = [1,0]
     *poisson*: integer, output is a poisson process with mean
@@ -1036,14 +1036,13 @@ def SimSpikingStimulus(stim, time = 1000, t_sim = None, with_labels = True):
     '''
     from pyNCS import pyST
     n = np.shape(stim)[1]
-    nc = 10
     SL = pyST.SpikeList(id_list = range(n))
     SLd = pyST.SpikeList(id_list = range(n-nc))
     SLc = pyST.SpikeList(id_list = range(n-nc,n))
     for i in range(n-nc):
         SLd[i] = pyST.STCreate.inh_poisson_generator(stim[:,i],
                                                     range(0,len(stim)*time,time),
-                                                    t_stop=t_sim, refractory = 4.)
+                                                    t_stop=t_sim)
     if with_labels:
         for t in range(0,len(stim)):
             SLt= pyST.SpikeList(id_list = range(n-nc,n))

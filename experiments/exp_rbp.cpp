@@ -140,6 +140,8 @@ int main(int ac,char *av[]) {
         if (vm.count("eta")) eta = vm["eta"].as<double>();
         if (vm.count("sigma")) sigma = vm["sigma"].as<double>();
         if (vm.count("prob_syn")) prob_syn = vm["prob_syn"].as<double>();
+        if (vm.count("gate_low")) gate_lo = vm["gate_low"].as<double>();
+        if (vm.count("gate_high")) gate_hi = vm["gate_high"].as<double>();
         if (vm.count("nvis")) nvis = vm["nvis"].as<int>();
         if (vm.count("nhid")) nhid = vm["nhid"].as<int>();
         if (vm.count("nout")) nout = vm["nout"].as<int>();
