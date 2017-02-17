@@ -155,11 +155,11 @@ def select_equal_n_labels(n, data, labels, classes = None, seed=None):
     if classes is None:
         classes = range(10)    
     n_classes = len(classes)
-    n_s = np.ceil(float(n)/n_classes)
+    n_s = int(np.ceil(float(n)/n_classes))
     max_i = [np.nonzero(labels==i)[0] for i in classes]
     if seed is not None:
         np.random.seed(seed)
-    f = lambda x, n: np.random.random_integers(0, x-1, n)
+    f = lambda x, n: np.random.random_integers(0, x-1, int(n))
     a = np.concatenate([max_i[i][f(len(max_i[i]), n_s)] for i in classes])
     np.random.shuffle(a)
     iv_seq = data[a]
@@ -213,7 +213,7 @@ def load_data_labels(data_url, labels_url, n_samples=1, randomize= False, nc_per
             s = iv_l_seq[i]*nc_perlabel
             iv_label_seq[i,s:(s+nc_perlabel)] = max_p
     else:
-        iv_label_seq = np.zeros([n_samples,0])
+        iv_label_seq = np.zeros([n_samples,0], dtype='int')
 
     #iv_label_seq = clamped_input_transform(iv_label_seq, min_p = min_p, max_p = max_p)
     iv_label_seq = iv_label_seq
@@ -394,7 +394,7 @@ def save_auryn_wmat(filename, W, dimensions=None, mask=None):
     M[:,2]=W.flatten()
 
     if mask is not None:
-        M = np.array(filter( lambda x: mask[x[0],x[1]], M))
+        M = np.array(filter( lambda x: mask[int(x[0]), int(x[1])], M))
 
     mmwrite(filename, csr_matrix((M[:,2],(M[:,0],M[:,1]))), symmetry='general')
     #np.savetxt(filename,M,

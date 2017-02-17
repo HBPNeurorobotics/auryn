@@ -16,7 +16,6 @@ examples/*/data/
 c_nsat/obj
 *.hex
 *.svg
-*.txt
 bin/
 evs_*_*
 env/
@@ -39,7 +38,6 @@ scripts/
 outputs
 inputs
 build/release/examples/
-CMakeFiles/
 __gen__*
 
 # PyInstaller
