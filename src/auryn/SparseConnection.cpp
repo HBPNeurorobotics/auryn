@@ -873,6 +873,8 @@ bool SparseConnection::load_from_file(ForwardMatrix * m, std::string filename, A
 
 	m->fill_zeros();
 	// finalize(); // commented this line out because it only acts on w
+  //
+
 
 	return true;
 }
