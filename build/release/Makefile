@@ -480,19 +480,6 @@ sim_tutorial1/fast:
 .PHONY : sim_tutorial1/fast
 
 #=============================================================================
-# Target rules for targets named exp_softsigmoid
-
-# Build rule for target.
-exp_softsigmoid: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 exp_softsigmoid
-.PHONY : exp_softsigmoid
-
-# fast build rule for target.
-exp_softsigmoid/fast:
-	$(MAKE) -f experiments/CMakeFiles/exp_softsigmoid.dir/build.make experiments/CMakeFiles/exp_softsigmoid.dir/build
-.PHONY : exp_softsigmoid/fast
-
-#=============================================================================
 # Target rules for targets named exp_rbp_online
 
 # Build rule for target.
@@ -506,17 +493,30 @@ exp_rbp_online/fast:
 .PHONY : exp_rbp_online/fast
 
 #=============================================================================
-# Target rules for targets named exp_rbp_online_count
+# Target rules for targets named exp_rbp_cnn
 
 # Build rule for target.
-exp_rbp_online_count: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 exp_rbp_online_count
-.PHONY : exp_rbp_online_count
+exp_rbp_cnn: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 exp_rbp_cnn
+.PHONY : exp_rbp_cnn
 
 # fast build rule for target.
-exp_rbp_online_count/fast:
-	$(MAKE) -f experiments/CMakeFiles/exp_rbp_online_count.dir/build.make experiments/CMakeFiles/exp_rbp_online_count.dir/build
-.PHONY : exp_rbp_online_count/fast
+exp_rbp_cnn/fast:
+	$(MAKE) -f experiments/CMakeFiles/exp_rbp_cnn.dir/build.make experiments/CMakeFiles/exp_rbp_cnn.dir/build
+.PHONY : exp_rbp_cnn/fast
+
+#=============================================================================
+# Target rules for targets named exp_rbp_online_soft
+
+# Build rule for target.
+exp_rbp_online_soft: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 exp_rbp_online_soft
+.PHONY : exp_rbp_online_soft
+
+# fast build rule for target.
+exp_rbp_online_soft/fast:
+	$(MAKE) -f experiments/CMakeFiles/exp_rbp_online_soft.dir/build.make experiments/CMakeFiles/exp_rbp_online_soft.dir/build
+.PHONY : exp_rbp_online_soft/fast
 
 #=============================================================================
 # Target rules for targets named exp_rbp
@@ -532,17 +532,30 @@ exp_rbp/fast:
 .PHONY : exp_rbp/fast
 
 #=============================================================================
-# Target rules for targets named exp_rbp_online_soft
+# Target rules for targets named exp_rbp_online_count
 
 # Build rule for target.
-exp_rbp_online_soft: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 exp_rbp_online_soft
-.PHONY : exp_rbp_online_soft
+exp_rbp_online_count: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 exp_rbp_online_count
+.PHONY : exp_rbp_online_count
 
 # fast build rule for target.
-exp_rbp_online_soft/fast:
-	$(MAKE) -f experiments/CMakeFiles/exp_rbp_online_soft.dir/build.make experiments/CMakeFiles/exp_rbp_online_soft.dir/build
-.PHONY : exp_rbp_online_soft/fast
+exp_rbp_online_count/fast:
+	$(MAKE) -f experiments/CMakeFiles/exp_rbp_online_count.dir/build.make experiments/CMakeFiles/exp_rbp_online_count.dir/build
+.PHONY : exp_rbp_online_count/fast
+
+#=============================================================================
+# Target rules for targets named exp_softsigmoid
+
+# Build rule for target.
+exp_softsigmoid: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 exp_softsigmoid
+.PHONY : exp_softsigmoid
+
+# fast build rule for target.
+exp_softsigmoid/fast:
+	$(MAKE) -f experiments/CMakeFiles/exp_softsigmoid.dir/build.make experiments/CMakeFiles/exp_softsigmoid.dir/build
+.PHONY : exp_softsigmoid/fast
 
 #=============================================================================
 # Target rules for targets named exp_rbp_dual
@@ -582,6 +595,19 @@ test_srm: cmake_check_build_system
 test_srm/fast:
 	$(MAKE) -f experiments/CMakeFiles/test_srm.dir/build.make experiments/CMakeFiles/test_srm.dir/build
 .PHONY : test_srm/fast
+
+#=============================================================================
+# Target rules for targets named test_erbp_conv2d
+
+# Build rule for target.
+test_erbp_conv2d: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_erbp_conv2d
+.PHONY : test_erbp_conv2d
+
+# fast build rule for target.
+test_erbp_conv2d/fast:
+	$(MAKE) -f experiments/CMakeFiles/test_erbp_conv2d.dir/build.make experiments/CMakeFiles/test_erbp_conv2d.dir/build
+.PHONY : test_erbp_conv2d/fast
 
 #=============================================================================
 # Target rules for targets named aube
@@ -724,14 +750,16 @@ help:
 	@echo "... sim_poisson_input"
 	@echo "... sim_step_current"
 	@echo "... sim_tutorial1"
-	@echo "... exp_softsigmoid"
 	@echo "... exp_rbp_online"
-	@echo "... exp_rbp_online_count"
-	@echo "... exp_rbp"
+	@echo "... exp_rbp_cnn"
 	@echo "... exp_rbp_online_soft"
+	@echo "... exp_rbp"
+	@echo "... exp_rbp_online_count"
+	@echo "... exp_softsigmoid"
 	@echo "... exp_rbp_dual"
 	@echo "... exp_sigmoid"
 	@echo "... test_srm"
+	@echo "... test_erbp_conv2d"
 	@echo "... aube"
 	@echo "... aubs"
 	@echo "... test_ComplexMatrix"

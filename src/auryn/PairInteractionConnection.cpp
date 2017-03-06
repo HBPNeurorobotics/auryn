@@ -24,26 +24,30 @@ using namespace auryn;
 
 void PairInteractionConnection::init(AurynWeight maxw)
 {
-	if ( dst->get_post_size() == 0 ) return; // avoids to run this code on silent nodes with zero post neurons.
-
+	if ( dst->get_post_size() == 0 ) { 
+		logger->debug("PairInteractionConnection:: Init bypass because post has no neurons");
+		return; // avoids to run this code on silent nodes with zero post neurons.
+	}
+	logger->debug("PairInteractionConnection:: Init connection");
 	logger->parameter("m",get_m_rows());
 	logger->parameter("n",get_n_cols());
+
 	last_spike_pre = new AurynTime[src->get_pre_size()];
 	last_spike_post = new AurynTime[dst->get_post_size()];
 
-	for ( unsigned int i = 0 ; i < get_m_rows() ; ++i )
+	logger->debug("PairInteractionConnection:: Init last spike arrays");
+	for ( unsigned int i = 0 ; i < src->get_pre_size() ; ++i )
 		last_spike_pre[i] = -1; // set this to end of range (so spike is infinitely in the future -- might cause problems without ffast-math
 
-	for ( unsigned int i = 0 ; i < get_n_cols() ; ++i )
+	for ( unsigned int i = 0 ; i < dst->get_post_size() ; ++i )
 		last_spike_post[i] = -1;
 
-	window_pre_post = new AurynFloat[WINDOW_MAX_SIZE];
-	window_post_pre = new AurynFloat[WINDOW_MAX_SIZE];
+	logger->debug("PairInteractionConnection:: Init STDP window arrays");
+	window_pre_post = new AurynFloat[PAIRINTERACTIONCON_WINDOW_MAX_SIZE];
+	window_post_pre = new AurynFloat[PAIRINTERACTIONCON_WINDOW_MAX_SIZE];
 
-	// initialize window with standard exponential 20ms time constant
-	
+	logger->debug("PairInteractionConnection:: Init STDP window with standard exponential 20ms time constant");
 	set_exponential_window();
-
 
 	// TODO write proper init for these variables
 	stdp_active = true;
@@ -54,11 +58,15 @@ void PairInteractionConnection::init(AurynWeight maxw)
 
 void PairInteractionConnection::free()
 {
-	delete last_spike_pre;
-	delete last_spike_post;
+	if ( dst->get_post_size() == 0 ) return; // only free if it was also initialized
 
-	delete window_pre_post;
-	delete window_post_pre;
+	logger->debug("PairInteractionConnection:: Freeing dynamic arrays");
+
+	delete [] last_spike_pre;
+	delete [] last_spike_post;
+
+	delete [] window_pre_post;
+	delete [] window_post_pre;
 }
 
 PairInteractionConnection::PairInteractionConnection(SpikingGroup * source, NeuronGroup * destination, 
@@ -86,7 +94,7 @@ inline AurynWeight PairInteractionConnection::dw_fwd(NeuronID post)
 {
   //const NeuronID post_rank = dst->global2rank(post); 
 	AurynTime diff = auryn::sys->get_clock()-last_spike_post[post];
-	if ( diff >= WINDOW_MAX_SIZE ) diff = WINDOW_MAX_SIZE-1;
+	if ( diff >= PAIRINTERACTIONCON_WINDOW_MAX_SIZE ) diff = PAIRINTERACTIONCON_WINDOW_MAX_SIZE-1;
 	double dw = window_post_pre[diff];
 	return dw;
 }
@@ -94,7 +102,7 @@ inline AurynWeight PairInteractionConnection::dw_fwd(NeuronID post)
 inline AurynWeight PairInteractionConnection::dw_bkw(NeuronID pre)
 {
 	AurynTime diff = auryn::sys->get_clock()-last_spike_pre[pre];
-	if ( diff >= WINDOW_MAX_SIZE ) diff = WINDOW_MAX_SIZE-1;
+	if ( diff >= PAIRINTERACTIONCON_WINDOW_MAX_SIZE ) diff = PAIRINTERACTIONCON_WINDOW_MAX_SIZE-1;
 	double dw = window_pre_post[diff];
 	return dw;
 }
@@ -169,7 +177,7 @@ void PairInteractionConnection::load_window_from_file( const char * filename , d
 	auryn::logger->msg(oss.str(),NOTIFICATION);
 
 	// default window all zeros
-	for ( int i = 0 ; i < WINDOW_MAX_SIZE ; ++i ) {
+	for ( int i = 0 ; i < PAIRINTERACTIONCON_WINDOW_MAX_SIZE ; ++i ) {
 		window_pre_post[i] = 0;
 		window_post_pre[i] = 0;
 	}
@@ -192,7 +200,7 @@ void PairInteractionConnection::load_window_from_file( const char * filename , d
 	infile.getline (buffer,256); 
 	sscanf (buffer,"# %u %f",&size,&timebinsize);
 
-	if ( size > 2*WINDOW_MAX_SIZE )
+	if ( size > 2*PAIRINTERACTIONCON_WINDOW_MAX_SIZE )
 		auryn::logger->msg("PairInteractionConnection:: STDP window too large ... truncating!",WARNING);
 
 	if ( auryn_timestep < timebinsize )
@@ -205,7 +213,7 @@ void PairInteractionConnection::load_window_from_file( const char * filename , d
 	while ( infile.getline (buffer,256)  )
 	{
 		sscanf (buffer,"%f %f",&time,&value);
-		if ( abs(time) < WINDOW_MAX_SIZE*auryn_timestep ) {
+		if ( abs(time) < PAIRINTERACTIONCON_WINDOW_MAX_SIZE*auryn_timestep ) {
 			NeuronID start;
 			if ( time < 0  ) {
 				start = -(time+auryn_timestep/2)/auryn_timestep; // plus element is for correct rounding
@@ -220,10 +228,10 @@ void PairInteractionConnection::load_window_from_file( const char * filename , d
 		count++;
 	}
 
-	// for ( int i = 0 ; i < WINDOW_MAX_SIZE ; ++i ) {
+	// for ( int i = 0 ; i < PAIRINTERACTIONCON_WINDOW_MAX_SIZE ; ++i ) {
 	// 	std::cout << std::ifstream << window_pre_post[i] << std::endl;
 	// }
-	// for ( int i = 0 ; i < WINDOW_MAX_SIZE ; ++i ) {
+	// for ( int i = 0 ; i < PAIRINTERACTIONCON_WINDOW_MAX_SIZE ; ++i ) {
 	// 	std::cout << std::ifstream << window_post_pre[i] << std::endl;
 	// }
 
@@ -242,20 +250,20 @@ void PairInteractionConnection::load_window_from_file( const char * filename , d
 
 void PairInteractionConnection::set_exponential_window ( double Aplus, double tau_plus, double Aminus, double tau_minus) 
 {
-	for ( int i = 0 ; i < WINDOW_MAX_SIZE ; ++i ) {
+	for ( int i = 0 ; i < PAIRINTERACTIONCON_WINDOW_MAX_SIZE ; ++i ) {
 		window_pre_post[i] = Aplus/tau_plus*exp(-i*auryn_timestep/tau_plus);
 	}
 
-	for ( int i = 0 ; i < WINDOW_MAX_SIZE ; ++i ) {
+	for ( int i = 0 ; i < PAIRINTERACTIONCON_WINDOW_MAX_SIZE ; ++i ) {
 		window_post_pre[i] = Aminus/tau_minus*exp(-i*auryn_timestep/tau_minus);
 	}
 
 	// zero floor terms 
-	set_floor_terms();
+	set_floor_terms(0.0, 0.0);
 }
 
 void PairInteractionConnection::set_floor_terms( double pre_post, double post_pre ) 
 {
-	window_pre_post[WINDOW_MAX_SIZE-1] = pre_post;
-	window_post_pre[WINDOW_MAX_SIZE-1] = post_pre;
+	window_pre_post[PAIRINTERACTIONCON_WINDOW_MAX_SIZE-1] = pre_post;
+	window_post_pre[PAIRINTERACTIONCON_WINDOW_MAX_SIZE-1] = post_pre;
 }

@@ -39,8 +39,7 @@ This will train a two-layer feed-forward spiking neural network (all to all conn
 License & Copyright 
 -------------------
 
-Copyright 2014-2016 Friedemann Zenke,
-Copyright 2017 Emre Neftci (on eRBP specific work)
+Copyright 2014-2017 Friedemann Zenke
 
 Auryn is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

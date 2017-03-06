@@ -198,29 +198,27 @@ int main(int ac,char *av[]) {
 
 	logger->msg("Setting up E connections ...",PROGRESS,true);
 
-	modulatedVmPlasticConnection * con_vh
-		= new modulatedVmPlasticConnection( neurons_vis,neurons_hid,
+	peRBPConnection * con_vh
+		= new peRBPConnection(
+            neurons_vis,
+            neurons_hid,
             fwmat_vh.c_str(),
-            eta, //eta
-		        20e-3,
-			      20e-3,
-            wmax,
-            AMPA,
             prob_syn,
+            eta, //eta
             gate_lo,
-            gate_hi);
+            gate_hi,
+            AMPA);
 
-	modulatedVmPlasticConnection * con_ho 
-		= new modulatedVmPlasticConnection( neurons_hid,neurons_out,
+	peRBPConnection * con_ho 
+		= new peRBPConnection(
+            neurons_hid,
+            neurons_out,
             fwmat_ho.c_str(),
-            eta, //eta
-		        20e-3,
-			      20e-3,
-            wmax,
-            AMPA,
             prob_syn,
+            eta, //eta
             gate_lo,
-            gate_hi);
+            gate_hi,
+            AMPA);
 
 
 	SparseConnection * con_ve1

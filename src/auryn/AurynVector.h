@@ -331,6 +331,22 @@ namespace auryn {
 				}
 			}
 
+			/*! \brief Elementwise max operation. */
+			void elementwise_max(AurynVector * v1, AurynVector * v2) 
+			{
+				check_size(v1);
+				check_size(v2);
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = std::max(v1->data[i],v2->data[i]);
+				}
+			}
+
+			/*! \brief Elementwise max operation with another vector. */
+			void elementwise_max(AurynVector * v1) 
+			{
+				elementwise_max(this,v1);
+			}
+
 			/*! \brief Takes each element to the n-th power. 
 			 *
 			 * \param n the exponent */
@@ -381,6 +397,14 @@ namespace auryn {
 			{
 				for ( IndexType i = 0 ; i < size ; ++i ) {
 					data[i] = -data[i];
+				}
+			}
+
+			/*! \brief Computes 1./x of each element. */
+			void inv()
+			{
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					data[i] = 1.0/data[i];
 				}
 			}
 
@@ -545,6 +569,59 @@ namespace auryn {
 					sum += get(i);
 				}
 				return sum;
+			}
+
+			/*! \brief Computes the l1 norm of the vector
+			 *
+			 */
+			double l1norm()
+			{
+				double sum = 0.0;
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					double e = get(i);
+					sum += std::abs(e);
+				}
+				return sum;
+			}
+
+
+			/*! \brief Computes the l2 norm of the vector
+			 *
+			 */
+			double l2norm()
+			{
+				double sum = 0.0;
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					double e = get(i);
+					sum += e*e;
+				}
+				return std::sqrt(sum);
+			}
+
+			/*! \brief Returns the max of the vector elements
+			 *
+			 */
+			double max()
+			{
+				double max = -1e64; // TODO use numeric limits for this
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					double el = get(i);
+					if ( el > max ) max = el;
+				}
+				return max;
+			}
+
+			/*! \brief Returns the min of the vector elements
+			 *
+			 */
+			double min()
+			{
+				double min = 1e64; // TODO use numeric limits for this
+				for ( IndexType i = 0 ; i < size ; ++i ) {
+					double el = get(i);
+					if ( el < min ) min = el;
+				}
+				return min;
 			}
 
 			/*! \brief Computes number of nonzero elements on this rank

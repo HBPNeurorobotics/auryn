@@ -27,7 +27,7 @@
 
 using namespace auryn;
 
-SIFGroup::SIFGroup(NeuronID size) : NeuronGroup(size)
+SIFGroup::SIFGroup(NeuronID size) : NeuronGroup(size, RANKLOCK)
 {
 	auryn::sys->register_spiking_group(this);
 	if ( evolve_locally() ) init();
@@ -98,17 +98,16 @@ SIFGroup::~SIFGroup()
 
 void SIFGroup::evolve()
 {
-t_mem->add(e_rest);
+//t_mem->add(e_rest);
 t_mem->sub(mem);
 t_mem->add(bg_current);
 t_mem->saxpy(scale_ampa,g_ampa);
 mem->saxpy(scale_mem,t_mem);
 
 
-t_dendrite->add(e_rest);
+//t_dendrite->add(e_rest);
 t_dendrite->sub(dendrite);
 t_dendrite->add(bg_current_dendrite);
-//t_dendrite->saxpy(scale_gaba,g_gaba);
 dendrite->saxpy(scale_dendrite,t_dendrite);
 
 for (NeuronID i = 0 ; i < get_rank_size() ; ++i ) {
@@ -127,7 +126,6 @@ for (NeuronID i = 0 ; i < get_rank_size() ; ++i ) {
 }
 
 g_ampa->scale(scale_ampa);
-//g_gaba->scale(scale_gaba);
 t_dendrite->mul(0.);
 t_mem->mul(0.);
 //g_gaba->scale(scale_gaba);

@@ -178,10 +178,18 @@ void System::free()
 		delete checkers[i];
 	for ( unsigned int i = 0 ; i < devices.size() ; ++i )
 		delete devices[i];
-	for ( unsigned int i = 0 ; i < connections.size() ; ++i )
+	for ( unsigned int i = 0 ; i < connections.size() ; ++i ) {
+		std::stringstream oss;
+		oss << "System:: Freeing Connection: " << connections[i]->get_name();
+		logger->debug(oss.str());
 		delete connections[i];
-	for ( unsigned int i = 0 ; i < spiking_groups.size() ; ++i )
+	}
+	for ( unsigned int i = 0 ; i < spiking_groups.size() ; ++i ) {
+		std::stringstream oss;
+		oss << "System:: Freeing SpikingGroup: " << spiking_groups[i]->get_name();
+		logger->debug(oss.str());
 		delete spiking_groups[i];
+	}
 
 	spiking_groups.clear();
 	connections.clear();
@@ -224,16 +232,6 @@ AurynLong System::get_total_neurons()
 	std::vector<SpikingGroup *>::const_iterator iter;
 	for ( iter = spiking_groups.begin() ; iter != spiking_groups.end() ; ++iter ) {
 		sum += (*iter)->get_rank_size(); 
-	}
-	return sum;
-}
-
-AurynDouble System::get_total_effective_load()
-{
-	AurynDouble sum = 0.;
-	std::vector<SpikingGroup *>::const_iterator iter;
-	for ( iter = spiking_groups.begin() ; iter != spiking_groups.end() ; ++iter ) {
-		sum += (*iter)->get_effective_load(); 
 	}
 	return sum;
 }
@@ -304,16 +302,28 @@ void System::sync()
 
 void System::evolve()
 {
-	std::vector<SpikingGroup *>::const_iterator iter;
+	{ // evolve spiking groups
+		std::vector<SpikingGroup *>::const_iterator iter;
+		for ( iter = spiking_groups.begin() ; iter != spiking_groups.end() ; ++iter ) 
+			(*iter)->conditional_evolve(); // evolve only if existing on rank
+	}
 
-	for ( iter = spiking_groups.begin() ; iter != spiking_groups.end() ; ++iter ) 
-		(*iter)->conditional_evolve(); // evolve only if existing on rank
-
+	evolve_connections(); // used to run in parallel to the sync (and could still in principle)
+	// what is important for event based integration such as done in LinearTrace that this stays
+	// on the same side of step() otherwise the results will be wrong (or evolve in LinearTrace has
+	// to be adapted.
+	
+	{ 	// evolve devices
+		std::vector<Device *>::const_iterator iter;
+		for ( iter = devices.begin() ; iter != devices.end() ; ++iter ) 
+			(*iter)->evolve(); 
+	}
+	
 	// update the online rate estimate
 	evolve_online_rate_monitor();
 }
 
-void System::evolve_independent()
+void System::evolve_connections()
 {
 	for ( std::vector<SpikingGroup *>::const_iterator iter = spiking_groups.begin() ; 
 		  iter != spiking_groups.end() ; 
@@ -337,7 +347,7 @@ void System::execute_devices()
 {
 	std::vector<Device *>::const_iterator iter;
 	for ( iter = devices.begin() ; iter != devices.end() ; ++iter ) {
-		(*iter)->propagate();
+		(*iter)->execute();
 	}
 }
 
@@ -427,7 +437,6 @@ bool System::run(AurynTime starttime, AurynTime stoptime, AurynFloat total_time,
 	if ( clock == 0 ) { // only show this once for clock==0
 		oss.str("");
 		oss	<< "On this rank: neurons_total="<< get_total_neurons() 
-			<< ", effective_load=" << get_total_effective_load()
 			<< ", synapses_total=" << get_total_synapses();
 		auryn::logger->msg(oss.str(),SETTINGS);
 
@@ -496,6 +505,7 @@ bool System::run(AurynTime starttime, AurynTime stoptime, AurynFloat total_time,
 			auryn::logger->msg(oss.str(),NOTIFICATION);
 		}
 
+		// Auryn duty cycle
 		evolve();
 		propagate();
 		execute_devices();
@@ -506,10 +516,6 @@ bool System::run(AurynTime starttime, AurynTime stoptime, AurynFloat total_time,
 			}
 		}
 
-		evolve_independent(); // used to run in parallel to the sync (and could still in principle)
-		// what is important for event based integration such as done in LinearTrace that this stays
-		// on the same side of step() otherwise the results will be wrong (or evolve in LinearTrace has
-		// to be adapted.
 		
 		step();	
 

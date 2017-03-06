@@ -72,7 +72,7 @@ void PatternStimulator::init(NeuronGroup * target, std::string filename, AurynFl
 
 }
 
-void PatternStimulator::propagate()
+void PatternStimulator::execute()
 {
 	if ( dst->evolve_locally() ) {
 

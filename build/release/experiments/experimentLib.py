@@ -259,6 +259,112 @@ def init_rbp1h_parameters(nv, nc, nh, mean_weight = 0., std_weight = 0.2, seed =
             'eo'  : [Weo,CWeo],
             'eh'  : [Weh,CWeh]}
 
+def conv2d(imsize=28,ksize=5,stride=2):
+    kx = ksize
+    ky = ksize
+
+    sx = imsize
+    sy = imsize
+
+    ox = imsize/stride
+    oy = imsize/stride
+
+    Kidx = np.arange(0, kx*ky, dtype='int').reshape(kx, ky)
+    K = np.zeros([kx,ky])
+    W = np.zeros([sx,sy,sx,sy], dtype='int')-1
+
+    for k in range(sx):
+        for l in range(sx):
+            for i in range(sx):
+                for j in range(sy):
+                    dx = k-i
+                    dy = l-j
+                    if dx in range(kx) and dy in range(ky):
+                        W[k,l,i,j] = Kidx[dx,dy]
+    Wd = W[:,:,::stride,::stride].reshape(sx*sy,ox*oy)
+    return Wd, Wd!=-1, K
+
+
+
+def SLrates(filename,nx=28,ny=28):
+    SL = monitor_to_spikelist(filename).id_slice(range(nx*ny))
+    ssl = SL.time_slice(0,250)
+    ssl.complete(range(nx*ny))
+    return ssl.mean_rates().reshape(nx,ny)
+
+def init_cnn2L_parameters(nv, nc, nfeat1, nfeat2, nh, mean_weight = 0., std_weight = 0.2, seed = 0, **kwargs):
+    '''
+    Initialize feed-forward deep neural network for random back-propagation parameters with 1 hidden layer
+    nv: number of visible neurons
+    nc: number of output neurons
+    nh: number of hidden neurons
+    '''
+    np.random.seed(int(seed))
+    nc1 = (nv-nc)/4
+    nc2 = (nv-nc)/16
+    Wvh = [None]*nfeat2
+    CWvh = [None]*nfeat2
+    avh=np.sqrt(std_weight/(nfeat2*nc2+nh))
+    for i in range(nfeat2):
+        Wvh[i] = np.random.uniform(low=-avh, high=+avh, size=(nc2,nh))
+        CWvh[i] = np.ones((nc2,nh), dtype='bool')
+    aho = np.sqrt(std_weight/(nc+nh))
+    Who = np.random.uniform(low=-aho, high=aho, size=(nh,nc))
+    CWho = np.ones((nh,nc), dtype='bool')
+    Woe = np.eye(nc)*-90e-3
+    CWoe = np.eye(nc,dtype='bool')
+    Wve = np.zeros((nv,nc))
+    Wve[nv-nc:,:] = np.eye(nc, dtype='bool')*90e-3
+    CWve = Wve!=0
+    Weo = np.eye(nc)*90e-3
+    CWeo = np.eye(nc, dtype='bool')
+    aeh = np.sqrt(std_weight/(nc+nh))
+    Weh = np.random.uniform(low=-aeh, high=aeh, size=(nc,nh))
+    B = np.dot(Weh.T, np.ones(nc))
+    Weh = Weh - B/nc
+    CWeh = np.ones((nc,nh), dtype='bool')
+
+    Wec1 = [None]*nfeat1
+    CWec1 = [None]*nfeat1
+    aec1 = np.sqrt(std_weight/(nh+nc))
+    for i in range(nfeat1):
+        v = np.random.uniform(low=-aec1, high=aec1, size=(nc,nc1))
+        B = np.dot(v.T, np.ones(nc))
+        v = v - B/nc
+        Wec1[i] = v/3
+        CWec1[i] = np.ones((nc,nc1), dtype='bool')
+
+    Wec2 = [None]*nfeat2
+    CWec2 = [None]*nfeat2
+    aec2 = np.sqrt(std_weight/(nh+nc))
+    for i in range(nfeat2):
+        v = np.random.uniform(low=-aec2, high=aec2, size=(nc,nc2))
+        B = np.dot(v.T, np.ones(nc))
+        v = v - B/nc
+        Wec2[i] = v/3
+        CWec2[i] = np.ones((nc,nc2), dtype='bool')
+
+    Wc1, CWc1, K = conv2d(28,5,2)
+    Wc2, CWc2, K = conv2d(14,5,2)
+
+    ret_dict = {
+            'ho'  : [Who,CWho],
+            'oe'  : [Woe,CWoe],
+            've'  : [Wve,CWve],
+            'eo'  : [Weo,CWeo],
+            'eh'  : [Weh,CWeh],
+            }
+    for i in range(nfeat2):
+        ret_dict['vh_{0}'.format(i)] = [Wvh[i],CWvh[i]]
+        ret_dict['ec2_{0}'.format(i)] = [Wec2[i],CWec2[i]]
+
+    for i in range(nfeat1):
+        ret_dict['ec1_{0}'.format(i)] = [Wec1[i],CWec1[i]]
+    ret_dict['c1'] = [Wc1,CWc1]+[.1*(np.random.uniform(size=[5,5])-.25) for i in range(nfeat1)]
+    ret_dict['c2'] = [Wc2,CWc2]+[.1*(np.random.uniform(size=[5,5])-.25) for i in range(nfeat1*nfeat2)]
+    return ret_dict
+
+
 def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight = 0., std_weight = 0.2, seed = 0, **kwargs):
     '''
     Initialize feed-forward deep neural network for random back-propagation parameters with 1 hidden layer
@@ -329,6 +435,60 @@ def create_rbp_init(base_filename = 'fwmat', **kwargs):
         W,CW = W_CW[k]
         save_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
 
+def to_auryn_conv2d(filename, Wd, K, n_K):
+    ident = filename.split('fwmat_')[1]
+    M={}
+    M[ident+'_cw'] = to_auryn_wmat(filename+'_cw', Wd, mask = Wd!=-1)
+    if len(n_K)==1:
+        for i in range(n_K[0]):
+            k = '_w_{0}'.format(i)
+            M[ident+k] = to_auryn_wmat(filename+k,K[i].reshape(-1,1))
+    elif len(n_K)==2:
+        for i in range(n_K[0]):
+            for j in range(n_K[1]):
+                k = '_w_{0}_{1}'.format(i,j)
+                M[ident+k] = to_auryn_wmat(filename+k,K[j+i*n_K[0]].reshape(-1,1))
+    return M
+
+def create_cnn_init(base_filename = 'fwmat', **kwargs):
+    '''
+    Create initial weight and bias parameters for the eRBP convnet.
+    '''
+    nfeat1 = kwargs['nfeat1']
+    nfeat2 = kwargs['nfeat2']
+    W_CW = init_cnn2L_parameters(**kwargs)
+    M = {}
+    for k in ['ho', 'oe', 've', 'eo', 'eh']:
+        W,CW = W_CW[k]
+        M[k] = to_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
+
+    M1 = to_auryn_conv2d("{0}_c1".format(base_filename),W_CW['c1'][0], W_CW['c1'][2:],[nfeat1])
+    M2 = to_auryn_conv2d("{0}_c2".format(base_filename),W_CW['c2'][0], W_CW['c2'][2:],[nfeat1,nfeat2])
+
+    for k in ['vh_{0}'.format(i) for i in range(nfeat2)]:
+        W,CW = W_CW[k]
+        M[k] = to_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
+
+    for k in ['ec1_{0}'.format(i) for i in range(nfeat1)]:
+        W,CW = W_CW[k]
+        M[k] = to_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
+
+    for k in ['ec2_{0}'.format(i) for i in range(nfeat2)]:
+        W,CW = W_CW[k]
+        M[k] = to_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
+         
+    M.update(M1)
+    M.update(M2)
+    save_all_fwmat(M, '{0}_'.format(base_filename))
+    return M
+
+    
+
+
+
+
+
+
 
 
 ##### from create_visible_data.py ###
@@ -397,6 +557,44 @@ def save_auryn_wmat(filename, W, dimensions=None, mask=None):
         M = np.array(filter( lambda x: mask[int(x[0]), int(x[1])], M))
 
     mmwrite(filename, csr_matrix((M[:,2],(M[:,0],M[:,1]))), symmetry='general')
+
+def save_all_fwmat(M, prefix):
+    from scipy.io import mmwrite
+    for k, v in M.iteritems():
+        mmwrite(prefix+k, v, symmetry='general')
+
+
+def to_auryn_wmat(filename, W, dimensions=None, mask=None):
+    '''
+    Writes a file from a numpy connection matrix *W*, in a format compatible with auryn's 'SparseConnection::load_from_complete_file'.
+    mask: boolean matrix specifying which connections should be made. No mask means all connections
+    (note that weight 0 creates a connection in auryn)
+    '''
+    from scipy.sparse import csr_matrix
+    from scipy.io import mmwrite
+
+    nv = np.shape(W)[0]
+    nh = np.shape(W)[1]
+
+    if np.sum(mask) == 0: 
+        mmwrite(filename, [[]]*nv, symmetry='general')
+        return
+
+    
+
+
+    if dimensions is None:
+        dimensions = [nv,nh]
+    M = np.zeros([nv*nh,3])
+
+    M[:,1]=np.arange(nv*nh)%nh
+    M[:,0]=np.repeat(np.arange(nv),nh)
+    M[:,2]=W.flatten()
+
+    if mask is not None:
+        M = np.array(filter( lambda x: mask[int(x[0]), int(x[1])], M))
+
+    return csr_matrix((M[:,2],(M[:,0],M[:,1])))
     #np.savetxt(filename,M,
     #            fmt='%d %d %f',
     #            newline='\n',
@@ -626,7 +824,34 @@ def collect_wmat(directory, con_id):
             return csr_matrix(sum_csr(a))
         else:
             #For backward compatibility
-            return csr_matrix((1,1))
+            return False
+
+def collect_wmat_auto(directory, con_id):
+    from scipy.sparse import csr_matrix
+    filenames='{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory) #Uses wierd file naming by auryn
+    from scipy.io import mmread
+    a = [] 
+    ggf = glob.glob(filenames)
+    if len(ggf)==0:
+        return None, None 
+    name = extract_wmat_name(ggf[0])
+    for f in ggf:
+        a.append(mmread(f))
+    
+    if numpy_version_largerthan('1.7.0'):
+        return csr_matrix(sum(a)),name
+    else:
+        if len(a)>0:
+            return csr_matrix(sum_csr(a)),name
+        else:
+            #For backward compatibility
+            return False
+
+def extract_wmat_name(filename):
+    fh =file(filename,'r')
+    name_cmt_line = [fh.readline() for i in range(3)][-1]
+    return name_cmt_line.strip().split('fwmat_')[1].strip('.mtx')
+
 
 def get_spike_count(directory):
     con_ids = range(5)
@@ -719,6 +944,19 @@ def process_parameters_rbp_dual(context):
         M[con_id[i]] = collect_wmat('outputs/{directory}/train/'.format(**context), i)
 
     write_parameters_rbp(M, context)
+    return M
+
+def process_parameters_auto(context):
+    M = {}
+    i = 0
+    while(True):
+        m, name = collect_wmat_auto('outputs/{directory}/train/'.format(**context), i)
+        if name == None:
+            break
+        else:
+            M[name] = m
+            i+=1
+    save_all_fwmat(M, 'inputs/{directory}/train/fwmat_'.format(**context))
     return M
 
 def process_allparameters_rbp(context):

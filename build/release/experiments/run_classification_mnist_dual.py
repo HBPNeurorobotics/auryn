@@ -59,8 +59,8 @@ def run_learn(context):
         --simtime {tsimtime_train} \
         --stimtime {simtime_train} \
         --record_full false \
-        --record_rasters false \
-        --record_rates false \
+        --record_rasters true \
+        --record_rates true \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
         --prob_syn {prob_syn}\
@@ -87,7 +87,7 @@ def run_learn(context):
 
 
 
-context={'ncores':4,
+context={'ncores':2,
          'directory' : 'mnist_online_dual',
          'nv' : 784+10, #Include nc
          'nh' : 200,
@@ -116,9 +116,9 @@ context={'ncores':4,
          'sample_duration_test' : .25, #Includes pause,
          'sample_pause_test' : 0.,
          'sigma' : 50e-3,
-         'n_samples_train' : 50000,
-         'n_samples_test' : 1000,
-         'n_epochs' : 60,
+         'n_samples_train' : 500,
+         'n_samples_test' : 100,
+         'n_epochs' : 1,
          'n_loop' : 1,
          'prob_syn' : 1.0,
          'init_mean_bias_v' : -.1,
@@ -258,20 +258,20 @@ if __name__ == '__main__':
         acc_hist.append([0, res])
         print res
 #
-    M = read_allparamters_dual(context)
-    d=et.mksavedir()
-    et.globaldata.context = context
-    et.save()
-    et.save(context, 'context.pkl')
-    et.save(sys.argv, 'sysargv.pkl')
-    et.save(M,'M.pkl')
-    et.save(spkcnt,'spkcnt.pkl')
-    et.save(bestM,'bestM.pkl')
-    et.save(acc_hist, 'acc_hist.pkl')
-    et.annotate('res',text=str(acc_hist))
+#   M = read_allparamters_dual(context)
+#   d=et.mksavedir()
+#   et.globaldata.context = context
+#   et.save()
+#   et.save(context, 'context.pkl')
+#   et.save(sys.argv, 'sysargv.pkl')
+#   et.save(M,'M.pkl')
+#   et.save(spkcnt,'spkcnt.pkl')
+#   et.save(bestM,'bestM.pkl')
+#   et.save(acc_hist, 'acc_hist.pkl')
+#   et.annotate('res',text=str(acc_hist))
 
-    textannotate('last_res',text=str(acc_hist))
-    textannotate('last_dir',text=d)
+#   textannotate('last_res',text=str(acc_hist))
+#   textannotate('last_dir',text=d)
 #
 #        
 #

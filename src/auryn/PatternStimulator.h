@@ -85,7 +85,7 @@ public:
 	void set_scale(AurynFloat scale);
 	AurynFloat get_scale();
 	/*! Implementation of necessary propagate() function. */
-	void propagate();
+	void execute();
 	/*! Load patterns from file */
 	void load_patterns( string filename );
 
