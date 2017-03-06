@@ -1,12 +1,12 @@
 #!/bin/python
 #-----------------------------------------------------------------------------
-# File Name : run_classification_mnist_online_deep.py
+# File Name : run_classification_mnist_online.py
 # Purpose:
 #
 # Author: Emre Neftci
 #
 # Creation Date : 01-04-2015
-# Last Modified : Tue 03 Jan 2017 10:21:31 AM PST
+# Last Modified : Mon 16 Jan 2017 10:56:38 AM PST
 # Copyright : (c) 
 # Licence : GPLv2
 #----------------------------------------------------------------------------- 
@@ -22,40 +22,51 @@ def run_classify(context, labels_test):
     #Uses outputs as inputs for the matrix! This is because the weights are symmetrized and written in the output.
     os.system('rm -rf outputs/{directory}/test'.format(**context))
     os.system('mkdir -p outputs/{directory}/test/' .format(**context))
-    ret = os.system('mpirun -n {ncores} ./exp_rbp_dual \
-        --learn false \
-        --eta 0.\
+    run_cmd = 'mpirun -n {ncores} ./exp_rbp_cnn \
+        --learn true \
         --simtime {simtime_test} \
         --stimtime {simtime_test} \
         --record_full false \
         --record_rasters false \
         --record_rates true \
-        --dir  outputs/{directory}/test/ \
+        --dir outputs/{directory}/test/ \
+        --eta  0.0\
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
-        --fhh  inputs/{directory}/train/{fhh} \
         --foe  inputs/{directory}/train/{foe} \
         --feo  inputs/{directory}/train/{feo} \
         --fve  inputs/{directory}/train/{fve} \
         --feh  inputs/{directory}/train/{feh} \
+        --fc1  inputs/{directory}/train/{fc1} \
+        --fc2  inputs/{directory}/train/{fc2}  \
+        --fck1 inputs/{directory}/train/{fck1} \
+        --fck2 inputs/{directory}/train/{fck2} \
+        --fec1 inputs/{directory}/train/{fec1} \
+        --fec2 inputs/{directory}/train/{fec2} \
         --ip_v inputs/{directory}/test/{ip_v}\
         --prob_syn {prob_syn}\
+        --sigma {sigma}\
         --nvis {nv} \
         --nhid {nh} \
         --nout {nc} \
-        --sigma {sigma}\
-        '.format(**context))
-
+        --gate_low  {gate_low}\
+        --gate_high  {gate_high}\
+        --nfeat1 {nfeat1} \
+        --nfeat2 {nfeat2} \
+        '.format(**context)
+    ret = os.system(run_cmd)
     if ret == 0:
         print 'ran'
 
     return float(sum(process_test_rbp(context)==labels_test))/len(labels_test)
 
+
+
 def run_learn(context):
     print context['eta']
     os.system('rm -rf outputs/{directory}/train'.format(**context))
     os.system('mkdir -p outputs/{directory}/train/' .format(**context))
-    run_cmd = 'mpirun -n {ncores} ./exp_rbp_dual \
+    run_cmd = 'mpirun -n {ncores} ./exp_rbp_cnn \
         --learn true \
         --simtime {tsimtime_train} \
         --stimtime {simtime_train} \
@@ -64,21 +75,28 @@ def run_learn(context):
         --record_rates false \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
-        --prob_syn {prob_syn}\
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
-        --fhh  inputs/{directory}/train/{fhh} \
         --foe  inputs/{directory}/train/{foe} \
         --feo  inputs/{directory}/train/{feo} \
         --fve  inputs/{directory}/train/{fve} \
         --feh  inputs/{directory}/train/{feh} \
+        --fc1  inputs/{directory}/train/{fc1} \
+        --fc2  inputs/{directory}/train/{fc2}  \
+        --fck1 inputs/{directory}/train/{fck1} \
+        --fck2 inputs/{directory}/train/{fck2} \
+        --fec1 inputs/{directory}/train/{fec1} \
+        --fec2 inputs/{directory}/train/{fec2} \
         --ip_v inputs/{directory}/train/{ip_v}\
-        --gate_low  {gate_low}\
-        --gate_high  {gate_high}\
+        --prob_syn {prob_syn}\
         --sigma {sigma}\
         --nvis {nv} \
         --nhid {nh} \
         --nout {nc} \
+        --gate_low  {gate_low}\
+        --gate_high  {gate_high}\
+        --nfeat1 {nfeat1} \
+        --nfeat2 {nfeat2} \
         '.format(**context)
     ret = os.system(run_cmd)
     return ret, run_cmd
@@ -89,42 +107,48 @@ def run_learn(context):
 
 
 
-context={'ncores':4,
-         'directory' : 'mnist_online_deep_dual',
+context={'ncores':8,
+         'directory' : 'mnist_cnn',
          'nv' : 784+10, #Include nc
-         'nh' : 1000,
-         'nh2' : 200,
-         'nh1' : 200,
+         'nh' : 100,
          'nc' : 10,
-         'eta': 6.0e-4,
+         'nfeat1' :8,
+         'nfeat2' :16,
+         'eta': 6e-4,
          'ncpl' : 1,
          'gate_low' : -1.15,
          'gate_high' : 1.15,
-         'fvh': 'fwmat_vh.mtx',
+         'fvh': 'fwmat_vh',
          'fho': 'fwmat_ho.mtx',
          'fhh': 'fwmat_hh.mtx',
          'foe': 'fwmat_oe.mtx',
          'feo': 'fwmat_eo.mtx',
          'fve': 'fwmat_ve.mtx',
          'feh': 'fwmat_eh.mtx',
+         'fc1': 'fwmat_c1_cw.mtx',
+         'fc2': 'fwmat_c2_cw.mtx',
+         'fck1': 'fwmat_c1_w',
+         'fck2': 'fwmat_c2_w',
+         'fec1': 'fwmat_ec1',
+         'fec2': 'fwmat_ec2',
          'ip_v': 'input_current_file', #Hard-coded
          'beta_prm' : 1.0,
          'tau_rec' : 4e-3,
          'tau_ref' : 4e-3,
-         'seed' : 32412,
+         'seed' : 12,
          'min_p' : 1e-5,
          'max_p' : .98,
          'binary' : False,
          'sample_duration_train' : .25, #Includes pause,
          'sample_pause_train' : 0.00,
-         'sample_duration_test' : .4, #Includes pause,
+         'sample_duration_test' : .25, #Includes pause,
          'sample_pause_test' : 0.,
-         'sigma' : 50e-3,
+         'sigma' : 0e-3,
          'n_samples_train' : 50000,
          'n_samples_test' : 10000,
-         'n_epochs' : 60,
+         'n_epochs' : 5,
          'n_loop' : 1,
-         'prob_syn' : 1.0,
+         'prob_syn' : .5,
          'init_mean_bias_v' : -.1,
          'init_mean_bias_h' : -.1,
          'init_std_bias_v' : 1e-32,
@@ -181,18 +205,13 @@ if __name__ == '__main__':
     n_epochs        = context['n_epochs'] 
     test_every      = context['test_every'] #never test
 
-    #For convenience
-    nv = context['nv']
-    nh = context['nh']
-    nc = context['nc']
-
     if not hot_init and directory is None:
         print 'Cold initialization..'
         os.system('rm -rf inputs/{directory}/train/'.format(**context))
         os.system('rm -rf inputs/{directory}/test/'.format(**context))
         os.system('mkdir -p inputs/{directory}/train/' .format(**context))
         os.system('mkdir -p inputs/{directory}/test/' .format(**context))
-        create_rbp_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), **context)
+        create_cnn_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), **context)
 
     elif directory is not None:
         print 'Loading previous run...'
@@ -221,6 +240,7 @@ if __name__ == '__main__':
 
     acc_hist = []
 
+
     context['seed'] = 0
     spkcnt = [None for i in range(n_epochs)] 
     for i in range(n_epochs):
@@ -240,10 +260,10 @@ if __name__ == '__main__':
         context['eta']=context['eta'] -eta_decay
         spkcnt[i] = get_spike_count('outputs/{directory}/train'.format(**context))
 
-        M = process_parameters_rbp_dual(context)
 
+        M = process_parameters_auto(context)
 
-       #Monitor SBM progress
+#       #Monitor SBM progress
         if test_every>0:
             if i%test_every == test_every-1:
                 res = run_classify(context, labels_test)
@@ -251,38 +271,38 @@ if __name__ == '__main__':
                 print res
                 if res>last_perf:
                     last_perf = res
-                    bestM = read_allparamters_dual(context)
+                    #bestM = read_allparamters_dual(context)
 #       # Necessary otherwise will only train on 1000 images total.
         context['seed'] = None 
-
-    #############
-    if n_epochs == 0 and test_every>0: #Test only
-        print 'Test only'
-        res = run_classify(context, labels_test)
-        acc_hist.append([0, res])
-        print res
 #
-    M = read_allparamters_dual(context)
-    d=et.mksavedir()
-    et.globaldata.context = context
-    et.save()
-    et.save(context, 'context.pkl')
-    et.save(sys.argv, 'sysargv.pkl')
-    et.save(M,'M.pkl')
-    et.save(spkcnt,'spkcnt.pkl')
-    et.save(bestM,'bestM.pkl')
-    et.save(acc_hist, 'acc_hist.pkl')
-    et.annotate('res',text=str(acc_hist))
+#    #############
+#    if n_epochs == 0 and test_every>0: #Test only
+#        print 'Test only'
+#        res = run_classify(context, labels_test)
+#        acc_hist.append([0, res])
+#        print res
+#
+#   M = read_allparamters_dual(context)
+#   d=et.mksavedir()
+#   et.globaldata.context = context
+#   et.save()
+#   et.save(context, 'context.pkl')
+#   et.save(sys.argv, 'sysargv.pkl')
+#   et.save(M,'M.pkl')
+#   et.save(spkcnt,'spkcnt.pkl')
+#   et.save(bestM,'bestM.pkl')
+#   et.save(acc_hist, 'acc_hist.pkl')
+#   et.annotate('res',text=str(acc_hist))
 
-    textannotate('last_res',text=str(acc_hist))
-    textannotate('last_dir',text=d)
+#   textannotate('last_res',text=str(acc_hist))
+#   textannotate('last_dir',text=d)
 #
 #        
 #
 #
-#
-#
-#
+
+
+
 
 
 

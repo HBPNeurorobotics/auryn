@@ -43,7 +43,7 @@ def plot_convergence_200_200():
     fh = file('/home/eneftci/Projects/code/python/dtp/Results/bp_200_200.pkl','r')
     tbp = np.array(pickle.load(fh)['epoch'])
 
-    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/134__17-01-2017/'
+    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/135__27-01-2017/'
     context = et.load('context.pkl')
     convergence_perbp = np.array(et.load('acc_hist.pkl'))
 
@@ -54,10 +54,11 @@ def plot_convergence_200_200():
     figure(figsize=(6,4))
     title('784-200-200-10')
     v = context['n_samples_train']/50000
-    semilogx(trbp,cgpu[:], '.-', linewidth=3, alpha=.6, label='RBP (GPU)')
-    semilogx(tbp,cgpubp[:], '.-', linewidth=3, alpha=.6, label='BP (GPU)')
-    semilogx(v+convergence_erbp[:,0]*v,100-100*convergence_erbp[:,1], '.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
-    semilogx(v+convergence_perbp[:,0]*v,100-100*convergence_perbp[:,1], '.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
+    semilogx(trbp,cgpu[:], 'b.-', linewidth=3, alpha=.6, label='RBP (GPU)')
+    semilogx(tbp,cgpubp[:], 'k.-', linewidth=3, alpha=.6, label='BP (GPU)')
+    semilogx(v+convergence_erbp[:-1,0]*v,100-100*convergence_erbp[:-1,1], 'g.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
+    semilogx(v+convergence_perbp[:-1,0]*v,100-100*convergence_perbp[:-1,1], 'r.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
+    print("200-200 perbp: {0:1.2f}     erbp: {1:1.2f}".format(100*np.mean(1-convergence_perbp[-5:,1]),100*np.mean(1-convergence_erbp[-5:,1])))
 
     xlim([0,2000])
     xlabel('Epochs')
@@ -99,19 +100,20 @@ def plot_convergence_200():
     convergence_perbp, context =  load_avg_convergence(d, prefix = '/home/eneftci/Projects/code/C/auryn_rbp/build/release/experiments/Results_scripts/')
     assert context['sigma']==0
     assert context['nh']==200
-    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/132__16-01-2017/'
-    context = et.load('context.pkl')
-    assert context['sigma']>0
-    assert context['nh']==200
+
+    d = ['017__28-01-2017/', '019__30-01-2017/']
+    convergence_erbp, context =  load_avg_convergence(d, prefix = '/home/eneftci/Projects/code/C/auryn_rbp/build/release/experiments/Results_scripts/')
+    assert context['sigma'] > 0
+    assert context['nh'] ==200
     convergence_erbp = np.array(et.load('acc_hist.pkl'))
 
     figure(figsize=(6,4))
     title('784-200-10')
     v = context['n_samples_train']/50000
-    semilogx(trbp,cgpu[:], '.-', linewidth=3, alpha=.6, label='RBP (GPU)')
-    semilogx(tbp,cgpubp[:], '.-', linewidth=3, alpha=.6, label='BP (GPU)')
-    semilogx(v+convergence_erbp[:,0]*v,100-100*convergence_erbp[:,1], '.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
-    semilogx(v+convergence_perbp[:,0]*v,100-100*convergence_perbp[:,1], '.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
+    semilogx(trbp,cgpu[:], 'b.-', linewidth=3, alpha=.6, label='RBP (GPU)')
+    semilogx(tbp,cgpubp[:], 'k.-', linewidth=3, alpha=.6, label='BP (GPU)')
+    semilogx(v+convergence_erbp[:-1,0]*v,100-100*convergence_erbp[:-1,1], 'g.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
+    semilogx(v+convergence_perbp[:-1,0]*v,100-100*convergence_perbp[:-1,1], 'r.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
 
     xlim([0,2000])
     xticks([1,10,100,1000,2000],[1,10,100,1000,2000],rotation=45)
@@ -120,6 +122,7 @@ def plot_convergence_200():
     ylim([0,15])
     #legend(frameon=False)
     tight_layout()
+    print("200 perbp: {0:1.2f}     erbp: {1:1.2f}".format(100*np.mean(1-convergence_perbp[-5:,1]),100*np.mean(1-convergence_erbp[-5:,1])))
     savefig('Results/convergence_erbp_auryn_200.png', format='png', dpi=1200)
 
 def plot_convergence_100():
@@ -139,8 +142,8 @@ def plot_convergence_100():
     fh = file('/home/eneftci/Projects/code/python/dtp/Results/bp_100.pkl','r')
     tbp = np.array(pickle.load(fh)['epoch'])
 
-    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/127__13-01-2017/'
-    context = et.load('context.pkl')
+    d = ['013__28-01-2017/', '014__28-01-2017/', '015__28-01-2017/', '016__28-01-2017/']
+    convergence_erbp, context =  load_avg_convergence(d, prefix = '/home/eneftci/Projects/code/C/auryn_rbp/build/release/experiments/Results_scripts/')
     assert context['sigma'] > 0
     assert context['nh'] ==100
     convergence_erbp = np.array(et.load('acc_hist.pkl'))
@@ -150,21 +153,25 @@ def plot_convergence_100():
     assert context['sigma'] == 0
     assert context['nh'] ==100
 
+    print("100 perbp: {0:1.2f}     erbp: {1:1.2f}".format(100*np.mean(1-convergence_perbp[-5:,1]),100*np.mean(1-convergence_erbp[-5:,1])))
+
     figure(figsize=(6,4))
     title('784-100-10')
     v = context['n_samples_train']/50000
-    semilogx(trbp,cgpu[:], '.-', linewidth=3, alpha=.6, label='RBP (GPU)')
-    semilogx(tbp,cgpubp[:], '.-', linewidth=3, alpha=.6, label='BP (GPU)')
-    semilogx(v+convergence_erbp[:,0]*v,100-100*convergence_erbp[:,1], '.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
-    semilogx(v+convergence_perbp[:,0]*v,100-100*convergence_perbp[:,1], '.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
+    semilogx(trbp,cgpu[:], 'b.-', linewidth=3, alpha=.6, label='RBP (GPU)')
+    semilogx(tbp,cgpubp[:], 'k.-', linewidth=3, alpha=.6, label='BP (GPU)')
+    semilogx(v+convergence_erbp[:-1,0]*v,100-100*convergence_erbp[:-1,1], 'g.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
+    semilogx(v+convergence_perbp[:-1,0]*v,100-100*convergence_perbp[:-1,1], 'r.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
 
     xlim([0,2000])
     xlabel('Epochs')
     ylabel('Error %')
     ylim([0,15])
     xticks([1,10,100,1000,2000],[1,10,100,1000,2000],rotation=45)
-    legend(frameon=False)
+    legend(frameon=False, loc=0,prop={'size':16})
+    draw()
     tight_layout()
+
     savefig('Results/convergence_erbp_auryn_100.png', format='png', dpi=1200)
 
 def plot_convergence_500():
@@ -184,23 +191,26 @@ def plot_convergence_500():
     fh = file('/home/eneftci/Projects/code/python/dtp/Results/bp_500.pkl','r')
     tbp = np.array(pickle.load(fh)['epoch'])
 
-    d = ['009__26-01-2017/', '010__26-01-2017/']
+    d = ['009__26-01-2017/', '010__26-01-2017/', '011__27-01-2017/', '012__27-01-2017/']
     convergence_perbp, context =  load_avg_convergence(d, prefix = '/home/eneftci/Projects/code/C/auryn_rbp/build/release/experiments/Results_scripts/')
     assert context['sigma'] == 0
     assert context['nh'] ==500
 
-    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/123__10-01-2017/'
-    context = et.load('context.pkl')
+    d = ['021__30-01-2017/', '022__30-01-2017/', '023__01-02-2017/', '024__01-02-2017/']
+    convergence_erbp, context =  load_avg_convergence(d, prefix = '/home/eneftci/Projects/code/C/auryn_rbp/build/release/experiments/Results_scripts/')
+    assert context['sigma'] > 0
+    assert context['nh'] ==500
     convergence_erbp = np.array(et.load('acc_hist.pkl'))
 
     figure(figsize=(6,4))
     title('784-500-10')
     v = context['n_samples_train']/50000
-    semilogx(trbp,cgpu[:], '.-', linewidth=3, alpha=.6, label='RBP (GPU)')
-    semilogx(tbp,cgpubp[:], '.-', linewidth=3, alpha=.6, label='BP (GPU)')
-    semilogx(v+convergence_erbp[:,0]*v,100-100*convergence_erbp[:,1], '.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
-    semilogx(v+convergence_perbp[:,0]*v,100-100*convergence_perbp[:,1], '.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
+    semilogx(trbp,cgpu[:], 'b.-', linewidth=3, alpha=.6, label='RBP (GPU)')
+    semilogx(tbp,cgpubp[:], 'k.-', linewidth=3, alpha=.6, label='BP (GPU)')
+    semilogx(v+convergence_erbp[:-1,0]*v,100-100*convergence_erbp[:-1,1], 'g.-',linewidth=3, alpha=.6, label='eRBP (Spiking)')
+    semilogx(v+convergence_perbp[:-1,0]*v,100-100*convergence_perbp[:-1,1], 'r.-',linewidth=3, alpha=.6, label='peRBP (Spiking)')
 
+    print("500 perbp: {0:1.2f}     erbp: {1:1.2f}".format(100*np.mean(1-convergence_perbp[-5:,1]),100*np.mean(1-convergence_erbp[-5:,1][[0,2]])))
     xlim([0,2000])
     xlabel('Epochs')
     ylabel('Error %')
@@ -234,13 +244,15 @@ def plot_synop_mac():
 
     ss = np.cumsum((nv*nh + nh*nc + nv*nh + nh*nc)*np.ones(2000)*50000)
 
-
-    plot(acc_hist[:,1],np.cumsum(nvis*nh + nhid*nc + 2*nout*nc + (nerr1+nerr2)*(nc+nh)).astype('float'),'r.-', linewidth=3, label='peRBP (Spiking)')
-    plot(1-cgpubp/100,ss[tbp-1].astype('float'),'g.-', linewidth=3, label='BP (GPU)')
+    figure(figsize=(6,4))
+    semilogy(acc_hist[:,1],np.cumsum(nvis*nh + nhid*nc + 2*nout*nc + (nerr1+nerr2)*(nc+nh)).astype('float'),'r.-', linewidth=3, label='peRBP (Spiking)')
+    semilogy(1-cgpubp/100,ss[tbp-1].astype('float'),'k.-', linewidth=3, label='BP (GPU)', alpha=.6)
     ylabel('MACs / SynOps')
     xlabel('Accuracy')
     legend(loc=2)
-    xticks([.95,.96,.97,.98])
+    xticks([.75,.85,.90,.95,1.0])
+    tight_layout()
+    savefig('Results/synop_mac.png', format='png', dpi=1200)
 
 def plot_mac():
     et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/133__17-01-2017/'
@@ -273,9 +285,9 @@ def plot_mac():
     xlabel('MNIST Accuracy')
 
 if __name__ == '__main__':
-    pass
-#    plot_convergence_200_200()
-#    plot_convergence_500()
-#    plot_convergence_200()
-#    plot_convergence_100()
+    plot_convergence_200_200()
+    plot_convergence_500()
+    plot_convergence_200()
+    plot_convergence_100()
+    plot_synop_mac()
 
