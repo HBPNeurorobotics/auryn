@@ -112,6 +112,12 @@ peRBPSharedConnection::peRBPSharedConnection(
 {
   init_kernel(kfilename);
   set_name(kfilename);
+  if(destination->get_locked_range()!=1){
+		std::stringstream oss;
+	    oss << "For shared connections, the destination must be ranklocked. Destination name is " << destination->get_log_name();
+		auryn::logger->msg(oss.str(),ERROR);
+    exit(-1);
+  }
 }
 
 void peRBPSharedConnection::free()

@@ -63,7 +63,8 @@ private:
 public:
 	/*! \brief The default constructor of this NeuronGroup */
 	AurynInt * spike_count; 
-	SIFGroup(NeuronID size);
+  NodeDistributionMode mode;
+	SIFGroup(NeuronID size, NodeDistributionMode node_distr_mode = AUTO);
 	virtual ~SIFGroup();
 
 	/*! \brief Controls the constant current input (per default set so zero) to neuron i */

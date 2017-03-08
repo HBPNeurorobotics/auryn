@@ -27,8 +27,9 @@
 
 using namespace auryn;
 
-SIFGroup::SIFGroup(NeuronID size) : NeuronGroup(size, RANKLOCK)
+SIFGroup::SIFGroup(NeuronID size, NodeDistributionMode node_distr_mode) : NeuronGroup(size, node_distr_mode)
 {
+  mode = node_distr_mode; 
 	auryn::sys->register_spiking_group(this);
 	if ( evolve_locally() ) init();
 

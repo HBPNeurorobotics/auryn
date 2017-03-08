@@ -203,14 +203,14 @@ int main(int ac,char *av[]) {
   PoissonStimulator * ps_c1[nfeat1];
   PoissonStimulator * ps_c2[nfeat2];
   for(int i=0; i<nfeat1; i++){ 
-    neurons_c1[i] = new SIFGroup(nc1);
+    neurons_c1[i] = new SIFGroup(nc1, RANKLOCK);
     neurons_c1[i]->set_refractory_period(3.9e-3);
     neurons_c1[i]->set_bg_currents(0.0e-3);
     neurons_c1[i]->set_bg_currents_dendrite(0e-2);
     if (sigma>0) ps_c1[i] = new PoissonStimulator( neurons_c1[i], 1000., sigma);
   }
   for(int i=0; i<nfeat2; i++){ 
-    neurons_c2[i] = new SIFGroup(nc2);
+    neurons_c2[i] = new SIFGroup(nc2, RANKLOCK);
     neurons_c2[i]->set_refractory_period(3.9e-3);
     neurons_c2[i]->set_bg_currents(0.0e-3);
     neurons_c2[i]->set_bg_currents_dendrite(0e-2);

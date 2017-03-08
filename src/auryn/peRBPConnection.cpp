@@ -126,7 +126,6 @@ void peRBPConnection::set_eta(AurynFloat value)
   } else {
     stdp_active=false;
   }
-  printf("%f \n", eta);
 }
 
 
