@@ -6,7 +6,7 @@
 # Author: Emre Neftci
 #
 # Creation Date : 31-03-2015
-# Last Modified : Sun 15 Jan 2017 08:12:30 AM PST
+# Last Modified : Mon 10 Apr 2017 08:53:21 PM PDT
 #
 # Copyright : (c) 
 # Licence : GPLv2
@@ -151,9 +151,7 @@ def clamped_input_transform_log(input_vector, min_p=1e-7, max_p=0.999, binary = 
     s =  -np.log(-1+1./(s))
     return s
 
-def select_equal_n_labels(n, data, labels, classes = None, seed=None):
-    if classes is None:
-        classes = range(10)    
+def select_equal_n_labels(n, data, labels, classes, seed=None):
     n_classes = len(classes)
     n_s = int(np.ceil(float(n)/n_classes))
     max_i = [np.nonzero(labels==i)[0] for i in classes]
@@ -166,8 +164,22 @@ def select_equal_n_labels(n, data, labels, classes = None, seed=None):
     iv_l_seq = labels[a]
     return iv_seq, iv_l_seq
 
+def load_mnist(data_url, labels_url):
+    f_image = file(data_url  ,'r')
+    f_label = file(labels_url,'r')
+    #Extracting images
+    m, Nimages, dimx, dimy =  np.fromstring(f_image.read(16),dtype='>i')
+    nbyte_per_image = dimx*dimy
+    images = np.fromstring(f_image.read(Nimages*nbyte_per_image),dtype='uint8').reshape(Nimages, nbyte_per_image).astype('float')/256
 
-def load_data_labels(data_url, labels_url, n_samples=1, randomize= False, nc_perlabel = 4, min_p = 0.0001, max_p = .95, binary = False, seed=None, **kwargs):
+    #Extracting labels
+    np.fromstring(f_label.read(8),dtype='>i') #header unused
+    labels = np.fromstring(f_label.read(Nimages),dtype='uint8')
+    f_image.close()
+    f_label.close()
+    return images, labels
+
+def load_data_labels(data_url, labels_url, n_samples=1, randomize= False, nc_perlabel = 1, min_p = 0.0001, max_p = .95, binary = False, seed=None, nc=10, skip=None, limit=None, **kwargs):
     '''
     Loads MNIST data. Returns randomized samples as pairs [data vectors, data labels]
     test: use test data set. If true, the first n_sample samples are used (no randomness)
@@ -177,51 +189,57 @@ def load_data_labels(data_url, labels_url, n_samples=1, randomize= False, nc_per
     '''
     import gzip, cPickle
 
-    print 'Loading ' + data_url
-    f_image = file(data_url  ,'r')
-    print 'Loading ' + labels_url
-    f_label = file(labels_url,'r')
 
-    #Extracting images
-    m, Nimages, dimx, dimy =  np.fromstring(f_image.read(16),dtype='>i')
-    nbyte_per_image = dimx*dimy
-    iv = np.fromstring(f_image.read(Nimages*nbyte_per_image),dtype='uint8').reshape(Nimages, nbyte_per_image).astype('float')/256
+    iv, iv_l = load_mnist(data_url, labels_url)
 
-    #Extracting labels
-    np.fromstring(f_label.read(8),dtype='>i') #header unused
-    iv_l = np.fromstring(f_label.read(Nimages),dtype='uint8')
-    
-    iv_clamped = iv
+    iv = iv[skip:limit]
+    iv_l = iv_l[skip:limit]
     
     if randomize is False:
         #Do not randomize order of test in any case
-        iv_seq, iv_l_seq  = iv_clamped[:n_samples], iv_l[:n_samples]
+        iv_seq, iv_l_seq  = iv[:n_samples], iv_l[:n_samples]
     elif randomize == 'within':
         idx = range(n_samples)
-        iv_seq, iv_l_seq  = iv_clamped[:n_samples], iv_l[:n_samples]
+        iv_seq, iv_l_seq  = iv[:n_samples], iv_l[:n_samples]
         np.random.shuffle(idx)
-        iv_seq = iv_clamped[idx]
+        iv_seq = iv[idx]
         iv_l_seq = iv_l[idx]
     else:
         #Do randomize order of training
-        iv_seq, iv_l_seq = select_equal_n_labels(n_samples, iv_clamped, iv_l, seed = seed)
+        iv_seq, iv_l_seq = select_equal_n_labels(n_samples, iv, iv_l, seed = seed, classes = range(nc))
 
     #expand labels
     if nc_perlabel>0:
-        iv_label_seq = np.zeros([n_samples, nc_perlabel*10])+min_p
+        iv_label_seq = np.zeros([n_samples, nc_perlabel*nc])+min_p
         for i in range(len(iv_l_seq)):
             s = iv_l_seq[i]*nc_perlabel
             iv_label_seq[i,s:(s+nc_perlabel)] = max_p
     else:
         iv_label_seq = np.zeros([n_samples,0], dtype='int')
 
-    #iv_label_seq = clamped_input_transform(iv_label_seq, min_p = min_p, max_p = max_p)
     iv_label_seq = iv_label_seq
     return iv_seq, iv_label_seq, iv_l_seq
 
+def Wround(W, wmin, wmax, wlevels, random = True):
+    s = np.sign(W);
+    wresol = float(wmax-wmin)/wlevels
+    abseps = np.abs(W)/wresol;
+    p = abseps-np.floor(abseps);
+    Wr = np.zeros_like(W)
+    if random:
+        x = p>np.random.rand(*W.shape)
+    else:
+        x = p>.5
+    if np.any(x):
+        Wr[x] = s[x]*wresol*np.ceil(abseps[x])
+    if np.any(~x):
+        Wr[~x] = s[~x]*wresol*np.floor(abseps[~x])
+    Wr[Wr<wmin]=wmin
+    Wr[Wr>(wmax-wresol)]=(wmax-wresol)
+    return Wr
 
 
-def init_rbp1h_parameters(nv, nc, nh, mean_weight = 0., std_weight = 0.2, seed = 0, **kwargs):
+def init_rbp1h_parameters(nv, nc, nh, mean_weight = 0., std_weight = 0.2, seed = 0, rr=None, **kwargs):
     '''
     Initialize feed-forward deep neural network for random back-propagation parameters with 1 hidden layer
     nv: number of visible neurons
@@ -251,13 +269,38 @@ def init_rbp1h_parameters(nv, nc, nh, mean_weight = 0., std_weight = 0.2, seed =
     B = np.dot(Weh.T, np.ones(nc))
     Weh = Weh - B/nc
     CWeh = np.ones((nc,nh), dtype='bool')
-    return {'vh'  : [Wvh,CWvh],
-            'hh'  : [Whh,CWhh],
-            'ho'  : [Who,CWho],
-            'oe'  : [Woe,CWoe],
-            've'  : [Wve,CWve],
-            'eo'  : [Weo,CWeo],
-            'eh'  : [Weh,CWeh]}
+    if rr == None:
+        return {'vh'  : [Wvh,CWvh],
+                'hh'  : [Whh,CWhh],
+                'ho'  : [Who,CWho],
+                'oe'  : [Woe,CWoe],
+                've'  : [Wve,CWve],
+                'eo'  : [Weo,CWeo],
+                'eh'  : [Weh,CWeh]}
+    else:
+        return {'vh'  : [Wround(Wvh, random = True, **rr),CWvh],
+                'hh'  : [Wround(Whh, random = True, **rr),CWhh],
+                'ho'  : [Wround(Who, random = True, **rr),CWho],
+                'oe'  : [Woe,CWoe],               
+                've'  : [Wve,CWve],               
+                'eo'  : [Weo,CWeo],               
+                'eh'  : [Wround(Weh, random = False, **rr),CWeh]}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def conv2d(imsize=28,ksize=5,stride=2):
     kx = ksize
@@ -331,7 +374,7 @@ def init_cnn2L_parameters(nv, nc, nfeat1, nfeat2, nh, mean_weight = 0., std_weig
         v = np.random.uniform(low=-aec1, high=aec1, size=(nc,nc1))
         B = np.dot(v.T, np.ones(nc))
         v = v - B/nc
-        Wec1[i] = v/3
+        Wec1[i] = v/10
         CWec1[i] = np.ones((nc,nc1), dtype='bool')
 
     Wec2 = [None]*nfeat2
@@ -341,7 +384,7 @@ def init_cnn2L_parameters(nv, nc, nfeat1, nfeat2, nh, mean_weight = 0., std_weig
         v = np.random.uniform(low=-aec2, high=aec2, size=(nc,nc2))
         B = np.dot(v.T, np.ones(nc))
         v = v - B/nc
-        Wec2[i] = v/3
+        Wec2[i] = v/10
         CWec2[i] = np.ones((nc,nc2), dtype='bool')
 
     Wc1, CWc1, K = conv2d(28,5,2)
@@ -372,7 +415,7 @@ def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight = 0., std_weight = 0.2, 
     nc: number of output neurons
     nh: number of hidden neurons
     '''
-    print std_weight
+    print std_weight, nc, nh1, nh2
     nh = nh1+nh2
     np.random.seed(seed)
     avh=np.sqrt(std_weight/(nv+nh1))
@@ -434,6 +477,7 @@ def create_rbp_init(base_filename = 'fwmat', **kwargs):
     for k in ['vh', 'hh', 'ho', 'oe', 've', 'eo', 'eh']:
         W,CW = W_CW[k]
         save_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
+    return W_CW
 
 def to_auryn_conv2d(filename, Wd, K, n_K):
     ident = filename.split('fwmat_')[1]
@@ -595,91 +639,7 @@ def to_auryn_wmat(filename, W, dimensions=None, mask=None):
         M = np.array(filter( lambda x: mask[int(x[0]), int(x[1])], M))
 
     return csr_matrix((M[:,2],(M[:,0],M[:,1])))
-    #np.savetxt(filename,M,
-    #            fmt='%d %d %f',
-    #            newline='\n',
-    #            delimiter=' ',
-    #            header = '%%MatrixMarket matrix coordinate real general\n{0} {1} {2}'.format(dimensions[0],dimensions[1],len(M)),
-    #        comments='')
 
-
-#def create_data_rbp(
-#        output_directory,
-#        n_samples,
-#        duration_data,
-#        duration_pause,
-#        data_url,
-#        labels_url,
-#        nc_perlabel = 4,
-#        filename_current = 'input_current_file',
-#        filename_pattern = 'input_pattern_file',
-#        beta_prm = 1.479,
-#        min_p = 1e-5,
-#        max_p = .98,
-#        randomize = False,
-#        with_labels = False,
-#        generate_sl = True,
-#        **kwargs
-#        ):
-#    '''
-#    *data_url* location of training data
-#    *labels_url* location of labels data
-#    kwargs passed to load_data_labels
-#    '''
-#    n_samples = n_samples
-#    wake_duration = duration_data
-#    sleep_duration = duration_pause
-#
-#    input_vectors, label_vectors, input_labels = load_data_labels(
-#            data_url = data_url,
-#            labels_url = labels_url,
-#            n_samples = n_samples,
-#            nc_perlabel = nc_perlabel,
-#            min_p = min_p, max_p = max_p, randomize = randomize,
-#            **kwargs)
-#
-#    if not with_labels:
-#        label_vectors *= 0
-#        label_vectors -= 10
-#
-#    data_vectors = np.concatenate([input_vectors, label_vectors], axis = 1)
-#
-#
-#    tiser = create_tiser(data_vectors,
-#                         wake_duration, #Wake
-#                         sleep_duration, #Sleep
-#                         scale = 1./beta_prm)
-#
-#    dur = wake_duration/1e-3
-#
-#    os.system('mkdir -p inputs/{0}/'.format(output_directory))
-#
-#
-#    SL = None
-#
-#    if generate_sl:
-#        rate = 1./(4e-3 + 1./(1e-32+5000*tiser[::2,1:]))
-#        print "Creating Spike Trains"
-#        SL = SimSpikingStimulus(rate,time=int(dur),t_sim=len(data_vectors)*dur, with_labels = with_labels)
-#        print "Exporting evs"
-#        ev = exportAER(SL, dt=1e-3)
-#        print "Writing spike trains"
-#        np.savetxt('inputs/{0}/{1}'.format(output_directory,filename_pattern), ev.get_adtmev(), fmt=('%f','%d'))
-#        print "Saved spike trains"
-#    else:
-#        header = '#Dataset n_samples:{0} wake:{1} sleep:{2}'.format(n_samples, wake_duration, sleep_duration)
-#        tiser2 = tiser.copy()[::2]
-#        tiser2[:,1:] = (tiser2[:,1:]-.5)*10000
-#        save_auryn_tiser('inputs/{0}/{1}'.format(output_directory, filename_current), tiser2, header)
-#        SL = tiser2
-#
-#
-#        #filename 'inputs/{0}/ecd_modulation_file'.format(directory)
-#
-#
-#
-#
-#    return input_labels, SL
 
 def create_data_rbp(
         output_directory,
@@ -688,7 +648,7 @@ def create_data_rbp(
         duration_pause,
         data_url,
         labels_url,
-        nc_perlabel = 4,
+        nc_perlabel = 1,
         filename_current = 'input_current_file',
         filename_pattern = 'input_pattern_file',
         beta_prm = 1.479,
@@ -699,6 +659,8 @@ def create_data_rbp(
         randomize = False,
         with_labels = False,
         generate_sl = True,
+        skip = None,
+        limit = None,
         **kwargs
         ):
     '''
@@ -719,6 +681,8 @@ def create_data_rbp(
             n_samples = n_samples,
             nc_perlabel = nc_perlabel,
             min_p = min_p, max_p = max_p, randomize = randomize,
+            skip = skip,
+            limit = limit,
             **kwargs)
 
     if not with_labels:
@@ -773,7 +737,7 @@ def create_data_rbp(
 
 ##### Data Analysis #################
 
-def monitor_to_spikelist(filename):
+def monitor_to_spikelist(filename, id_list=None):
     '''
     Combine Auryn Spike monitor outputs and build a pyNCS SpikeList
     filename can be a string, a string with a wildcard (parsed with glob.glob) or a list of strings, each file must be the output of a spike monitor.
@@ -797,7 +761,12 @@ def monitor_to_spikelist(filename):
             t = data[0,:]*1000 #Conversion to [ms]
             spikes = np.concatenate([spikes, zip(V,t)])
 
-    return pyST.SpikeList(spikes = spikes, id_list = np.unique(spikes[:,0]))
+    SL = pyST.SpikeList(spikes = spikes, id_list = np.unique(spikes[:,0]))
+
+    if id_list is not None:
+        SL.complete(id_list)
+
+    return SL
 
 def sum_csr(a):
     if len(a)>0:
@@ -1000,7 +969,7 @@ def process_test_rbp(context):
     Sc.t_start = 0
     Sc.t_stop = context['simtime_test']*1000
     T = (context['sample_duration_test']+context['sample_pause_test'])*1000
-    fr = Sc.firing_rate(T).reshape(10,context['nc_perlabel'],-1).mean(axis=1)
+    fr = Sc.firing_rate(T).reshape(context['nc'],context['nc_perlabel'],-1).mean(axis=1)
     return np.argmax(fr,axis=0)
 
 

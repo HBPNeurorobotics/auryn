@@ -1,12 +1,12 @@
 #!/bin/python
 #-----------------------------------------------------------------------------
-# File Name : run_classification_mnist_online.py
+# File Name : run_classification_mnist_online_deep.py
 # Purpose:
 #
 # Author: Emre Neftci
 #
 # Creation Date : 01-04-2015
-# Last Modified : Mon 10 Apr 2017 08:53:50 PM PDT
+# Last Modified : Sun 02 Apr 2017 08:17:12 PM PDT
 # Copyright : (c) 
 # Licence : GPLv2
 #----------------------------------------------------------------------------- 
@@ -33,16 +33,18 @@ def run_classify(context, labels_test):
         --dir  outputs/{directory}/test/ \
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
+        --fhh  inputs/{directory}/train/{fhh} \
         --foe  inputs/{directory}/train/{foe} \
         --feo  inputs/{directory}/train/{feo} \
         --fve  inputs/{directory}/train/{fve} \
         --feh  inputs/{directory}/train/{feh} \
         --ip_v inputs/{directory}/test/{ip_v}\
         --prob_syn {prob_syn}\
-        --sigma {sigma}\
         --nvis {nv} \
         --nhid {nh} \
         --nout {nc} \
+        --sigma {sigma}\
+        --ip_file ipat_831\
         '.format(**context))
 
     if ret == 0:
@@ -59,13 +61,14 @@ def run_learn(context):
         --simtime {tsimtime_train} \
         --stimtime {simtime_train} \
         --record_full false \
-        --record_rasters true \
+        --record_rasters false \
         --record_rates true \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
         --prob_syn {prob_syn}\
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
+        --fhh  inputs/{directory}/train/{fhh} \
         --foe  inputs/{directory}/train/{foe} \
         --feo  inputs/{directory}/train/{feo} \
         --fve  inputs/{directory}/train/{fve} \
@@ -73,9 +76,10 @@ def run_learn(context):
         --ip_v inputs/{directory}/train/{ip_v}\
         --gate_low  {gate_low}\
         --gate_high  {gate_high}\
+        --sigma {sigma}\
+        --ip_file ipat_831\
         --nvis {nv} \
         --nhid {nh} \
-        --sigma {sigma}\
         --nout {nc} \
         '.format(**context)
     ret = os.system(run_cmd)
@@ -87,11 +91,13 @@ def run_learn(context):
 
 
 
-context={'ncores':2,
-         'directory' : 'mnist_online_dual',
-         'nv' : 784+10, #Include nc
-         'nh' : 200,
-         'nc' : 10,
+context={'ncores':4,
+         'directory' : 'emnist_online_deep_dual',
+         'nv' : 784+47, #Include nc
+         'nh' : 400,
+         'nh2' : 200,
+         'nh1' : 200,
+         'nc' : 47,
          'eta': 6.0e-4,
          'ncpl' : 1,
          'gate_low' : -1.15,
@@ -107,18 +113,18 @@ context={'ncores':2,
          'beta_prm' : 1.0,
          'tau_rec' : 4e-3,
          'tau_ref' : 4e-3,
-         'seed' : 12,
+         'seed' : 32412,
          'min_p' : 1e-5,
          'max_p' : .98,
          'binary' : False,
          'sample_duration_train' : .25, #Includes pause,
          'sample_pause_train' : 0.00,
-         'sample_duration_test' : .25, #Includes pause,
+         'sample_duration_test' : .4, #Includes pause,
          'sample_pause_test' : 0.,
          'sigma' : 50e-3,
-         'n_samples_train' : 500,
-         'n_samples_test' : 100,
-         'n_epochs' : 1,
+         'n_samples_train' : 2400*47,
+         'n_samples_test' : 400*47,
+         'n_epochs' : 30,
          'n_loop' : 1,
          'prob_syn' : 1.0,
          'init_mean_bias_v' : -.1,
@@ -128,12 +134,12 @@ context={'ncores':2,
          'input_thr' : .43,
          'input_scale' : .5,
          'mean_weight' : .0,
-         'std_weight' : 7.0,
-         'test_data_url' :    'data/t10k-images-idx3-ubyte',
-         'test_labels_url' :  'data/t10k-labels-idx1-ubyte',
-         'train_data_url' :   'data/train-images-idx3-ubyte',
-         'train_labels_url' : 'data/train-labels-idx1-ubyte',
-         'test_every' : 1} #never test
+         'std_weight' : 5.0,
+         'test_data_url' :    '/home/eneftci/Projects/share/data/emnist/emnist-balanced-test-images-idx3-ubyte',
+         'test_labels_url' :  '/home/eneftci/Projects/share/data/emnist/emnist-balanced-test-labels-idx1-ubyte',
+         'train_data_url' :   '/home/eneftci/Projects/share/data/emnist/emnist-balanced-train-images-idx3-ubyte',
+         'train_labels_url' : '/home/eneftci/Projects/share/data/emnist/emnist-balanced-train-labels-idx1-ubyte',
+         'test_every' : 3} 
 
 context['eta_orig'] = context['eta']
 
@@ -167,7 +173,7 @@ if __name__ == '__main__':
         if o == '-c': #custom parameters passed through input arguments
             context.update(eval(a))
 
-    context['nc_perlabel']           = context['nc']/10
+    context['nc_perlabel']           = 1
     context['simtime_train']         = context['n_samples_train']*(context['sample_duration_train']+context['sample_pause_train'])
     context['tsimtime_train']        = context['n_samples_train']*(context['sample_duration_train']+context['sample_pause_train'])
     context['simtime_test']          = context['n_samples_test']* (context['sample_duration_test']+ context['sample_pause_test'])
@@ -188,7 +194,7 @@ if __name__ == '__main__':
         os.system('rm -rf inputs/{directory}/test/'.format(**context))
         os.system('mkdir -p inputs/{directory}/train/' .format(**context))
         os.system('mkdir -p inputs/{directory}/test/' .format(**context))
-        W_CW = create_rbp_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), **context)
+        create_rbp_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), **context)
 
     elif directory is not None:
         print 'Loading previous run...'
@@ -196,12 +202,13 @@ if __name__ == '__main__':
         M = et.load('M.pkl')
         M = process_allparameters_rbp(context)
         #save_parameters(M, context)
+
     if test_every>0:
         labels_test, SL_test = create_data_rbp(n_samples = n_samples_test, 
                       output_directory = '{directory}/test'.format(**context),
                       data_url = context['test_data_url'],
                       labels_url = context['test_labels_url'],
-                      randomize = False,
+                      randomize = True,
                       with_labels = False,
                       duration_data = context['sample_duration_test'],
                       duration_pause = context['sample_pause_test'],
@@ -235,12 +242,12 @@ if __name__ == '__main__':
         context['eta']=context['eta'] -eta_decay
         spkcnt[i] = get_spike_count('outputs/{directory}/train'.format(**context))
 
-        M = process_parameters_rbp(context)
+        M = process_parameters_rbp_dual(context)
 
 
        #Monitor SBM progress
         if test_every>0:
-            if i%test_every == test_every-1:
+            if (i+1)%test_every == 0 or i==0:
                 res = run_classify(context, labels_test)
                 acc_hist.append([i, res])
                 print res
@@ -257,27 +264,27 @@ if __name__ == '__main__':
         acc_hist.append([0, res])
         print res
 #
-#   M = read_allparamters_dual(context)
-#   d=et.mksavedir()
-#   et.globaldata.context = context
-#   et.save()
-#   et.save(context, 'context.pkl')
-#   et.save(sys.argv, 'sysargv.pkl')
-#   et.save(M,'M.pkl')
-#   et.save(spkcnt,'spkcnt.pkl')
-#   et.save(bestM,'bestM.pkl')
-#   et.save(acc_hist, 'acc_hist.pkl')
-#   et.annotate('res',text=str(acc_hist))
+    M = read_allparamters_dual(context)
+    d=et.mksavedir()
+    et.globaldata.context = context
+    et.save()
+    et.save(context, 'context.pkl')
+    et.save(sys.argv, 'sysargv.pkl')
+    et.save(M,'M.pkl')
+    et.save(spkcnt,'spkcnt.pkl')
+    et.save(bestM,'bestM.pkl')
+    et.save(acc_hist, 'acc_hist.pkl')
+    et.annotate('res',text=str(acc_hist))
 
-#   textannotate('last_res',text=str(acc_hist))
-#   textannotate('last_dir',text=d)
+    textannotate('last_res',text=str(acc_hist))
+    textannotate('last_dir',text=d)
 #
 #        
 #
 #
-
-
-
+#
+#
+#
 
 
 

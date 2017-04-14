@@ -61,6 +61,7 @@ int main(int ac,char *av[]) {
   string fwmat_eo = "";
   string fwmat_eh = "";
   string ip_v = "";
+  string ipat_file = "ipat";
 
 	std::stringstream oss;
 	string strbuf ;
@@ -98,6 +99,7 @@ int main(int ac,char *av[]) {
             ("feo", po::value<string>(), "file with error to output connections")
             ("feh", po::value<string>(), "file with error to hidden connections")
             ("ip_v", po::value<string>(), "file with input patterns for visible layer")
+            ("ip_file", po::value<string>(), "file with input patterns for visible layer")
             ("sigma", po::value<double>(), "poisson stimulator weight")
             ("stimtime", po::value<double>(), "stimtime")
             ("eta", po::value<double>(), "learning rate")
@@ -146,6 +148,7 @@ int main(int ac,char *av[]) {
         if (vm.count("nhid")) nhid = vm["nhid"].as<int>();
         if (vm.count("nout")) nout = vm["nout"].as<int>();
   	    if (vm.count("ip_v")) ip_v  = vm["ip_v"].as<string>();
+  	    if (vm.count("ip_file")) ipat_file  = vm["ip_file"].as<string>();
 
     }
     catch(std::exception& e) {
@@ -174,7 +177,7 @@ int main(int ac,char *av[]) {
 
 	logger->msg("Done setting up neuron groups ...",PROGRESS,true);
 	logger->msg("Setting up Pattern Stimulator ...",PROGRESS,true);
-  PatternStimulator * stim = new PatternStimulator(neurons_vis, ip_v, "ipat", 1., nvis);
+  PatternStimulator * stim = new PatternStimulator(neurons_vis, ip_v, ipat_file.c_str(), 1., nvis);
 	logger->msg("Done setting up Pattern Stimulator ...",PROGRESS,true);
 
   if(sigma>0){
@@ -274,15 +277,18 @@ int main(int ac,char *av[]) {
   }
 
   if (!fwmat_hh.empty()){
-	modulatedVmPlasticConnection * con_hh 
-		= new modulatedVmPlasticConnection( neurons_hid, neurons_hid,
+	peRBPConnection * con_hh
+		= new peRBPConnection(
+            neurons_hid,
+            neurons_hid,
             fwmat_hh.c_str(),
+            prob_syn,
             eta, //eta
-		        20e-3,
-			      20e-3,
-            wmax,
-            AMPA,
-            prob_syn);
+            -25,
+            25,
+            AMPA);
+
+
   }
 
   std::stringstream filename;

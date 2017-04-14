@@ -1,12 +1,12 @@
 #!/bin/python
 #-----------------------------------------------------------------------------
-# File Name : run_classification_mnist_online.py
+# File Name : run_classification_mnist_online_deep.py
 # Purpose:
 #
 # Author: Emre Neftci
 #
 # Creation Date : 01-04-2015
-# Last Modified : Mon 10 Apr 2017 08:53:50 PM PDT
+# Last Modified : Thu 30 Mar 2017 09:12:22 PM PDT
 # Copyright : (c) 
 # Licence : GPLv2
 #----------------------------------------------------------------------------- 
@@ -22,7 +22,7 @@ def run_classify(context, labels_test):
     #Uses outputs as inputs for the matrix! This is because the weights are symmetrized and written in the output.
     os.system('rm -rf outputs/{directory}/test'.format(**context))
     os.system('mkdir -p outputs/{directory}/test/' .format(**context))
-    ret = os.system('mpirun -n {ncores} ./exp_rbp_dual \
+    ret = os.system('mpirun -n {ncores} ./exp_rbp_dual_rr \
         --learn false \
         --eta 0.\
         --simtime {simtime_test} \
@@ -33,6 +33,7 @@ def run_classify(context, labels_test):
         --dir  outputs/{directory}/test/ \
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
+        --fhh  inputs/{directory}/train/{fhh} \
         --foe  inputs/{directory}/train/{foe} \
         --feo  inputs/{directory}/train/{feo} \
         --fve  inputs/{directory}/train/{fve} \
@@ -54,18 +55,19 @@ def run_learn(context):
     print context['eta']
     os.system('rm -rf outputs/{directory}/train'.format(**context))
     os.system('mkdir -p outputs/{directory}/train/' .format(**context))
-    run_cmd = 'mpirun -n {ncores} ./exp_rbp_dual \
+    run_cmd = 'mpirun -n {ncores} ./exp_rbp_dual_rr \
         --learn true \
         --simtime {tsimtime_train} \
         --stimtime {simtime_train} \
         --record_full false \
-        --record_rasters true \
-        --record_rates true \
+        --record_rasters false \
+        --record_rates false \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
         --prob_syn {prob_syn}\
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
+        --fhh  inputs/{directory}/train/{fhh} \
         --foe  inputs/{directory}/train/{foe} \
         --feo  inputs/{directory}/train/{feo} \
         --fve  inputs/{directory}/train/{fve} \
@@ -73,9 +75,9 @@ def run_learn(context):
         --ip_v inputs/{directory}/train/{ip_v}\
         --gate_low  {gate_low}\
         --gate_high  {gate_high}\
+        --sigma {sigma}\
         --nvis {nv} \
         --nhid {nh} \
-        --sigma {sigma}\
         --nout {nc} \
         '.format(**context)
     ret = os.system(run_cmd)
@@ -87,15 +89,17 @@ def run_learn(context):
 
 
 
-context={'ncores':2,
-         'directory' : 'mnist_online_dual',
+context={'ncores':4,
+         'directory' : 'mnist_online_deep_dual_rr',
          'nv' : 784+10, #Include nc
-         'nh' : 200,
+         'nh' : 400,
+         'nh2' : 200,
+         'nh1' : 200,
          'nc' : 10,
          'eta': 6.0e-4,
          'ncpl' : 1,
-         'gate_low' : -1.15,
-         'gate_high' : 1.15,
+         'gate_low' : -.6,
+         'gate_high' : .6,
          'fvh': 'fwmat_vh.mtx',
          'fho': 'fwmat_ho.mtx',
          'fhh': 'fwmat_hh.mtx',
@@ -107,20 +111,20 @@ context={'ncores':2,
          'beta_prm' : 1.0,
          'tau_rec' : 4e-3,
          'tau_ref' : 4e-3,
-         'seed' : 12,
+         'seed' : 32412,
          'min_p' : 1e-5,
          'max_p' : .98,
          'binary' : False,
          'sample_duration_train' : .25, #Includes pause,
          'sample_pause_train' : 0.00,
-         'sample_duration_test' : .25, #Includes pause,
+         'sample_duration_test' : .4, #Includes pause,
          'sample_pause_test' : 0.,
-         'sigma' : 50e-3,
-         'n_samples_train' : 500,
-         'n_samples_test' : 100,
-         'n_epochs' : 1,
+         'sigma' : 0e-3,
+         'n_samples_train' : 50000,
+         'n_samples_test' : 10000,
+         'n_epochs' : 60,
          'n_loop' : 1,
-         'prob_syn' : 1.0,
+         'prob_syn' : .65,
          'init_mean_bias_v' : -.1,
          'init_mean_bias_h' : -.1,
          'init_std_bias_v' : 1e-32,
@@ -133,7 +137,7 @@ context={'ncores':2,
          'test_labels_url' :  'data/t10k-labels-idx1-ubyte',
          'train_data_url' :   'data/train-images-idx3-ubyte',
          'train_labels_url' : 'data/train-labels-idx1-ubyte',
-         'test_every' : 1} #never test
+         'test_every' : 5} #never test
 
 context['eta_orig'] = context['eta']
 
@@ -188,7 +192,7 @@ if __name__ == '__main__':
         os.system('rm -rf inputs/{directory}/test/'.format(**context))
         os.system('mkdir -p inputs/{directory}/train/' .format(**context))
         os.system('mkdir -p inputs/{directory}/test/' .format(**context))
-        W_CW = create_rbp_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), **context)
+        create_rbp_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), rr={'wmin':-2, 'wmax':2, 'wlevels':256}, **context)
 
     elif directory is not None:
         print 'Loading previous run...'
@@ -196,6 +200,7 @@ if __name__ == '__main__':
         M = et.load('M.pkl')
         M = process_allparameters_rbp(context)
         #save_parameters(M, context)
+
     if test_every>0:
         labels_test, SL_test = create_data_rbp(n_samples = n_samples_test, 
                       output_directory = '{directory}/test'.format(**context),
@@ -235,12 +240,12 @@ if __name__ == '__main__':
         context['eta']=context['eta'] -eta_decay
         spkcnt[i] = get_spike_count('outputs/{directory}/train'.format(**context))
 
-        M = process_parameters_rbp(context)
+        M = process_parameters_rbp_dual(context)
 
 
        #Monitor SBM progress
         if test_every>0:
-            if i%test_every == test_every-1:
+            if i==0 or i%test_every == test_every-1:
                 res = run_classify(context, labels_test)
                 acc_hist.append([i, res])
                 print res
@@ -257,27 +262,27 @@ if __name__ == '__main__':
         acc_hist.append([0, res])
         print res
 #
-#   M = read_allparamters_dual(context)
-#   d=et.mksavedir()
-#   et.globaldata.context = context
-#   et.save()
-#   et.save(context, 'context.pkl')
-#   et.save(sys.argv, 'sysargv.pkl')
-#   et.save(M,'M.pkl')
-#   et.save(spkcnt,'spkcnt.pkl')
-#   et.save(bestM,'bestM.pkl')
-#   et.save(acc_hist, 'acc_hist.pkl')
-#   et.annotate('res',text=str(acc_hist))
+    M = read_allparamters_dual(context)
+    d=et.mksavedir()
+    et.globaldata.context = context
+    et.save()
+    et.save(context, 'context.pkl')
+    et.save(sys.argv, 'sysargv.pkl')
+    et.save(M,'M.pkl')
+    et.save(spkcnt,'spkcnt.pkl')
+    et.save(bestM,'bestM.pkl')
+    et.save(acc_hist, 'acc_hist.pkl')
+    et.annotate('res',text=str(acc_hist))
 
-#   textannotate('last_res',text=str(acc_hist))
-#   textannotate('last_dir',text=d)
+    textannotate('last_res',text=str(acc_hist))
+    textannotate('last_dir',text=d)
 #
 #        
 #
 #
-
-
-
+#
+#
+#
 
 
 

@@ -47,7 +47,7 @@ def plot_convergence_200_200():
     context = et.load('context.pkl')
     convergence_perbp = np.array(et.load('acc_hist.pkl'))
 
-    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/120__07-01-2017/'
+    et.globaldata.directory = '/homes/eneftci/work/code/C/auryn_rbp/build/release/experiments/Results/173__31-03-2017/'
     context = et.load('context.pkl')
     convergence_erbp = np.array(et.load('acc_hist.pkl'))
 
@@ -285,6 +285,7 @@ def plot_mac():
     xlabel('MNIST Accuracy')
 
 if __name__ == '__main__':
+    print "results"
     plot_convergence_200_200()
     plot_convergence_500()
     plot_convergence_200()

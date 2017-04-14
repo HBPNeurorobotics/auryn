@@ -118,6 +118,7 @@ public:
 
 	/*! \brief Implementation of necessary propagate() function. */
 	void propagate();
+	void execute();
 
 };
 

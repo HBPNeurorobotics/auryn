@@ -193,9 +193,9 @@ int main(int ac,char *av[]) {
 	logger->msg("Setting up neuron groups ...",PROGRESS,true);
 
 
-	SIFGroup * neurons_out = new SIFGroup( nout);
 	LinGroup * neurons_err1 = new LinGroup( nout);
 	LinGroup * neurons_err2 = new LinGroup( nout);
+	SIFGroup * neurons_out = new SIFGroup( nout);
 	SRM0Group * neurons_vis = new SRM0Group( nvis);
   PatternStimulator * stim = new PatternStimulator(neurons_vis, ip_v, "ipat", 1., nvis);
 	SIFGroup * neurons_c1[nfeat1]; 
@@ -214,21 +214,21 @@ int main(int ac,char *av[]) {
     neurons_c2[i]->set_refractory_period(3.9e-3);
     neurons_c2[i]->set_bg_currents(0.0e-3);
     neurons_c2[i]->set_bg_currents_dendrite(0e-2);
-    if (sigma>0) ps_c2[i] = new PoissonStimulator( neurons_c2[i], 1000., sigma);
+    //if (sigma>0) ps_c2[i] = new PoissonStimulator( neurons_c2[i], 1000., sigma);
   }
 	SIFGroup * neurons_hid = new SIFGroup( nhid);
-	neurons_vis->set_refractory_period(4.0e-3);
+	neurons_vis->set_refractory_period(2.0e-3);
 
 
-  if(sigma>0){
-	PoissonStimulator * ps_hid = new PoissonStimulator( neurons_hid, 1000., sigma);
-	PoissonStimulator * ps_out = new PoissonStimulator( neurons_out, 1000., sigma);
-  } else {
-	logger->msg("No PoissonStimulator ...",PROGRESS,true);
-  }
+  //if(sigma>0){
+	//PoissonStimulator * ps_hid = new PoissonStimulator( neurons_hid, 1000., sigma);
+	//PoissonStimulator * ps_out = new PoissonStimulator( neurons_out, 1000., sigma);
+  //} else {
+	//logger->msg("No PoissonStimulator ...",PROGRESS,true);
+  //}
 	printf("prob syn %f", prob_syn);
 
-	neurons_out->set_refractory_period(3.9e-3);
+	neurons_out->set_refractory_period(2.0e-3);
 	neurons_hid->set_refractory_period(3.9e-3); // minimal ISI 5.1ms
 
 	neurons_out->set_bg_currents(0.0e-3); // corresponding to 200pF for C=200pF and tau=20ms

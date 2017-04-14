@@ -6,7 +6,7 @@
 # Author: Emre Neftci
 #
 # Creation Date : 01-04-2015
-# Last Modified : Tue 03 Jan 2017 10:21:31 AM PST
+# Last Modified : Wed 12 Apr 2017 08:22:26 PM PDT
 # Copyright : (c) 
 # Licence : GPLv2
 #----------------------------------------------------------------------------- 
@@ -90,16 +90,16 @@ def run_learn(context):
 
 
 context={'ncores':4,
-         'directory' : 'mnist_online_deep_dual',
+         'directory' : 'mnist_online_deep_dual_regate',
          'nv' : 784+10, #Include nc
-         'nh' : 1000,
+         'nh' : 400,
          'nh2' : 200,
          'nh1' : 200,
          'nc' : 10,
          'eta': 6.0e-4,
          'ncpl' : 1,
-         'gate_low' : -1.15,
-         'gate_high' : 1.15,
+         'gate_low' : -.6,
+         'gate_high' : .6,
          'fvh': 'fwmat_vh.mtx',
          'fho': 'fwmat_ho.mtx',
          'fhh': 'fwmat_hh.mtx',
@@ -119,12 +119,12 @@ context={'ncores':4,
          'sample_pause_train' : 0.00,
          'sample_duration_test' : .4, #Includes pause,
          'sample_pause_test' : 0.,
-         'sigma' : 50e-3,
+         'sigma' : 0e-3,
          'n_samples_train' : 50000,
          'n_samples_test' : 10000,
          'n_epochs' : 60,
          'n_loop' : 1,
-         'prob_syn' : 1.0,
+         'prob_syn' : .65,
          'init_mean_bias_v' : -.1,
          'init_mean_bias_h' : -.1,
          'init_std_bias_v' : 1e-32,
@@ -137,7 +137,7 @@ context={'ncores':4,
          'test_labels_url' :  'data/t10k-labels-idx1-ubyte',
          'train_data_url' :   'data/train-images-idx3-ubyte',
          'train_labels_url' : 'data/train-labels-idx1-ubyte',
-         'test_every' : 1} #never test
+         'test_every' : 5} #never test
 
 context['eta_orig'] = context['eta']
 

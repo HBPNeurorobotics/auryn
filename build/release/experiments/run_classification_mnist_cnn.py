@@ -6,7 +6,7 @@
 # Author: Emre Neftci
 #
 # Creation Date : 01-04-2015
-# Last Modified : Mon 16 Jan 2017 10:56:38 AM PST
+# Last Modified : Thu 16 Mar 2017 10:30:04 AM PDT
 # Copyright : (c) 
 # Licence : GPLv2
 #----------------------------------------------------------------------------- 
@@ -114,7 +114,7 @@ context={'ncores':8,
          'nc' : 10,
          'nfeat1' :8,
          'nfeat2' :16,
-         'eta': 6e-4,
+         'eta': 6.0e-4,
          'ncpl' : 1,
          'gate_low' : -1.15,
          'gate_high' : 1.15,
@@ -135,7 +135,7 @@ context={'ncores':8,
          'beta_prm' : 1.0,
          'tau_rec' : 4e-3,
          'tau_ref' : 4e-3,
-         'seed' : 12,
+         'seed' : 1234,
          'min_p' : 1e-5,
          'max_p' : .98,
          'binary' : False,
@@ -146,9 +146,9 @@ context={'ncores':8,
          'sigma' : 0e-3,
          'n_samples_train' : 50000,
          'n_samples_test' : 10000,
-         'n_epochs' : 5,
+         'n_epochs' : 60,
          'n_loop' : 1,
-         'prob_syn' : .5,
+         'prob_syn' : .65,
          'init_mean_bias_v' : -.1,
          'init_mean_bias_h' : -.1,
          'init_std_bias_v' : 1e-32,
@@ -265,7 +265,7 @@ if __name__ == '__main__':
 
 #       #Monitor SBM progress
         if test_every>0:
-            if i%test_every == test_every-1:
+            if (i+1)%test_every == 0 or i==0:
                 res = run_classify(context, labels_test)
                 acc_hist.append([i, res])
                 print res
@@ -273,7 +273,6 @@ if __name__ == '__main__':
                     last_perf = res
                     #bestM = read_allparamters_dual(context)
 #       # Necessary otherwise will only train on 1000 images total.
-        context['seed'] = None 
 #
 #    #############
 #    if n_epochs == 0 and test_every>0: #Test only
@@ -282,20 +281,20 @@ if __name__ == '__main__':
 #        acc_hist.append([0, res])
 #        print res
 #
-#   M = read_allparamters_dual(context)
-#   d=et.mksavedir()
-#   et.globaldata.context = context
-#   et.save()
-#   et.save(context, 'context.pkl')
-#   et.save(sys.argv, 'sysargv.pkl')
-#   et.save(M,'M.pkl')
-#   et.save(spkcnt,'spkcnt.pkl')
-#   et.save(bestM,'bestM.pkl')
-#   et.save(acc_hist, 'acc_hist.pkl')
-#   et.annotate('res',text=str(acc_hist))
+    M = process_parameters_auto(context)
+    d=et.mksavedir()
+    et.globaldata.context = context
+    et.save()
+    et.save(context, 'context.pkl')
+    et.save(sys.argv, 'sysargv.pkl')
+    et.save(M,'M.pkl')
+    et.save(spkcnt,'spkcnt.pkl')
+    et.save(bestM,'bestM.pkl')
+    et.save(acc_hist, 'acc_hist.pkl')
+    et.annotate('res',text=str(acc_hist))
 
-#   textannotate('last_res',text=str(acc_hist))
-#   textannotate('last_dir',text=d)
+    textannotate('last_res',text=str(acc_hist))
+    textannotate('last_dir',text=d)
 #
 #        
 #

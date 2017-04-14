@@ -459,9 +459,9 @@ void SparseConnection::finalize()
 		auryn::logger->msg(oss.str(),VERBOSE);
 		if (w->get_fill_level()<WARN_FILL_LEVEL)
 		{
-			std::stringstream oss2;
-			oss2 << get_log_name() <<"Wasteful fill level (" << w->get_fill_level() << ")! Make sure everything is in order!";
-			auryn::logger->msg(oss2.str(),WARNING);
+			//std::stringstream oss2;
+			//oss2 << get_log_name() <<"Wasteful fill level (" << w->get_fill_level() << ")! Make sure everything is in order!";
+			//auryn::logger->msg(oss2.str(),WARNING);
 		}
 	}
 }

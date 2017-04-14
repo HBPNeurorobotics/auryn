@@ -84,7 +84,7 @@ for o,a in optlist:
 
 et.globaldata.directory = directory
 context = et.load('context.pkl')
-context['n_samples_test'] = 10000
+context['n_samples_test'] = 100
 context['sample_duration_test'] = .5
 context['sample_pause_test'] = .0
 context['simtime_test'] = context['n_samples_test']*(context['sample_duration_test']+context['sample_pause_test'])
@@ -130,7 +130,7 @@ if __name__ == '__other__':
 
 
 
-if __name__ == '__main__':
+if __name__ == '__main0__':
 
     et.globaldata.directory = directory
     context = et.load('context.pkl')
@@ -252,11 +252,11 @@ if __name__ == '__main__':
     et.savefig('convergence_spike.png', format='png', dpi=1200)
 
 
-if __name__ == '__main0__':
+if __name__ == '__main__':
 #if __name__ == '__main__':
     context['ncores'] = 1
     context['eta']=context['eta_orig']*0
-    context['n_samples_test'] = 100
+    context['n_samples_test'] = 1000
     context['sample_duration_test'] = .25
     context['sample_pause_test'] = .0
 #    context['input_scale'] = .65
@@ -268,6 +268,9 @@ if __name__ == '__main0__':
 
     M = et.load('M.pkl')
     write_allparameters_rbp(M, context)
+
+    #Uncomment for before learning
+    #create_rbp_init(base_filename = 'inputs/{directory}/train/fwmat'.format(**context), **context)
 
     labels_test, SL_test = create_data_rbp(n_samples = n_samples_test, 
                   output_directory = '{directory}/test'.format(**context),
@@ -286,7 +289,7 @@ if __name__ == '__main0__':
 
     context['seed'] = 0
   
-    res = run_classify(context, labels_test, monitor = True)
+    res = run_classify(context, labels_test, monitor_raster = True)
     print res
 
     ion()
@@ -294,11 +297,13 @@ if __name__ == '__main0__':
     f=figure(figsize=(6,4))
     a=axes()
     SLv = monitor_to_spikelist('outputs/{directory}/test/coba.*.vis.ras'.format(**context))
+    SLv.t_start=0; SLv.t_stop = context['simtime_test']*1000; SLv.complete(range(context['nv']))
     SLv.id_slice(range(784)).raster_plot(kwargs={'marker':'.','markersize':3,'alpha':.2,'color':'k'}, display=a)
     tight_layout()
     a.set_ylabel('')
     a.set_xlim([0,1250])
-    et.savefig('raster_vis.png')
+
+    #et.savefig('raster_vis.png')
 #    for i in range( context['n_samples_test']):
 #        sv = SLv.id_slice(range(784)).time_slice(i*context['sample_duration_test']*1000,(i+1)*context['sample_duration_test']*1000)
 #        sv.complete(range(784))
@@ -324,7 +329,9 @@ if __name__ == '__main0__':
     yticks([100,300], ['Layer 1','Layer 2'], rotation=90)
     a.set_ylabel('')
     tight_layout()
-    et.savefig('raster_hid.png')
+    #SLh1.t_start=0; SLh1.t_stop = context['simtime_test']*1000;SLh1.complete(range(context['nh1']))
+    #SLh2.t_start=0; SLh2.t_stop = context['simtime_test']*1000;SLh2.complete(range(context['nh1'],context['nh1']+context['nh2']))
+    #et.savefig('raster_hid.png')
 
     figure(figsize=(6,2))
     a=axes()
@@ -333,7 +340,8 @@ if __name__ == '__main0__':
     yticks([0,10])
     tight_layout()
     a.set_ylabel('')
-    et.savefig('raster_out.png')
+    SLo.t_start=0; SLo.t_stop = context['simtime_test']*1000;SLo.complete(range(context['nc']))
+    #et.savefig('raster_out.png')
     
     figure(figsize=(6,2))
     a=axes()
@@ -349,7 +357,9 @@ if __name__ == '__main0__':
     yticks([0,10])
     a.set_ylabel('')
     a.set_xlim([0,1250])
-    et.savefig('rates_err.png')
+    SLe1.t_start=0; SLe1.t_stop = context['simtime_test']*1000; SLe1.complete(range(context['nc']))
+    SLe2.t_start=0; SLe2.t_stop = context['simtime_test']*1000; SLe2.complete(range(context['nc']))
+    #et.savefig('rates_err.png')
 
     figure(figsize=(6,2))
     a=axes()
@@ -359,15 +369,61 @@ if __name__ == '__main0__':
     yticks([784,794],[0,10])
     a.set_ylabel('')
     a.set_xlim([0,1250])
-    et.savefig('rates_label.png')
+    #et.savefig('rates_label.png')
 
     po = []
     ph = []
     pV = []
     T = (context['sample_duration_test']+context['sample_pause_test'])*1000
     for i in range(context['n_samples_test']):
-        po.append(SLo.time_slice(i*T+context['sample_pause_test']*1000+4, (i+1)*T).first_spike_time()[1])
+        po.append(SLo.time_slice(i*T+context['sample_pause_test']*1000+4, (i+1)*T).first_spike_time())
         ph.append(SLh.time_slice(i*T+context['sample_pause_test']*1000+.1, i*T+context['sample_pause_test']*1000+4).raw_data().__len__())
         pV.append(SLv.time_slice(i*T+context['sample_pause_test']*1000+.1, i*T+context['sample_pause_test']*1000+4).raw_data().__len__())
     print np.sum(np.array(po) == labels_test)
+
+    def plot_mean_std(t,V, color='k', label='v'):
+        m = V.mean(axis=1)
+        s = V.std(axis=1)
+        fill_between(t, -s+m, s+m, linewidth=0, alpha=0.35, color=color) 
+        plot(t, m, linewidth=3, color=color, label=label)
+
+    tbin=5
+    conv_v = SLv.firing_rate(tbin).reshape(context['nv'],context['n_samples_test'],-1).mean(axis=0).T    
+    conv_v_value = conv_v[-5:,:].mean(axis=0)
+    norm_conv_v = conv_v / conv_v_value
+
+    #conv_h1 = SLh1.firing_rate(tbin).reshape(context['nh1'],context['n_samples_test'],-1).mean(axis=0).T    
+    #conv_h1_value = conv_h1[-5:,:].mean(axis=0)
+    #norm_conv_h1 = conv_h1 / conv_h1_value
+
+    #conv_h2 = SLh2.firing_rate(tbin).reshape(context['nh2'],context['n_samples_test'],-1).mean(axis=0).T    
+    #conv_h2_value = conv_h2[-5:,:].mean(axis=0)
+    #norm_conv_h2 = conv_h2 / conv_h2_value
+
+    #conv_o = SLo.firing_rate(tbin).reshape(context['nc'],context['n_samples_test'],-1).mean(axis=0).T    
+    #conv_o_value = conv_o[-5:,:].mean(axis=0)
+    #norm_conv_o = conv_o / conv_o_value
+
+    conv_e1 = SLe1.firing_rate(tbin).reshape(context['nc'],context['n_samples_test'],-1).mean(axis=0).T    
+    conv_e1_value = conv_e1[-5:,:].mean(axis=0)
+    norm_conv_e1 = conv_e1 
+
+    t = SLv.time_slice(0,context['sample_duration_test']*1000).time_axis(tbin)[:-1]
+
+    figure()
+    title('Neural Activity After Training')
+    subplot(211)
+    plot_mean_std(t, norm_conv_v, label='Layer D')
+    legend()
+    ylabel('Normalized\n Firing Rate')
+    subplot(212)
+    plot_mean_std(t, norm_conv_e1, label='Layer E')
+    legend()
+    axvline(50, color='k')
+    ylabel('Firing Rate [Hz]')
+    xlabel('Time [ms]')
+    tight_layout()
+    et.savefig('neural_act_after.png')
+
+
 

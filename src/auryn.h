@@ -61,6 +61,7 @@
 #include "auryn/SparseConnection.h"
 #include "auryn/peRBPSharedConnection.h"
 #include "auryn/peRBPConnection.h"
+#include "auryn/peRBPConnectionRR.h"
 #include "auryn/RateModulatedConnection.h"
 #include "auryn/STDPConnection.h"
 #include "auryn/PairInteractionConnection.h"
