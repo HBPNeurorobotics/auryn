@@ -13,8 +13,8 @@ def create_event_data_rbp(n_samples, max_samples, exp_directory, test_or_train, 
     labels = read_labels(labels_name)
     current_timestamp = 0
 
-    used_labels = []
-    next_sample_ts = []
+    used_labels = np.empty(n_samples)
+    next_sample_ts = np.empty(n_samples)
     time = np.array([])
     n_id = np.array([])
 
@@ -25,18 +25,18 @@ def create_event_data_rbp(n_samples, max_samples, exp_directory, test_or_train, 
 
     tot = test_or_train.capitalize()
 
-    for sample_id in sample_ids:
+    for sample_id, i in zip(sample_ids, range(n_samples)):
         timestamps, neuron_id = load_events_from_aedat("data/{test_or_train}_{exp_dir}/{tot}{i}.aedat".format(test_or_train=test_or_train, exp_dir=exp_directory, i=sample_id, tot=tot))
         timestamps += current_timestamp
 
         current_timestamp = max(timestamps)
         time = np.append(time, timestamps)
         n_id = np.append(n_id, neuron_id)
-        used_labels.append(labels[sample_id])
-        next_sample_ts.append(current_timestamp)
+        used_labels[i] = labels[sample_id]
+        next_sample_ts[i] = current_timestamp
 
     write_ras(time, n_id, exp_directory, test_or_train, "input")
-    write_ras(np.array(next_sample_ts), np.array(used_labels), exp_directory, test_or_train, "labels")
+    write_ras(next_sample_ts, used_labels, exp_directory, test_or_train, "labels")
 
 def read_labels(labels_name):
     with open("data/{name}".format(name=labels_name), 'rb') as flbl:
