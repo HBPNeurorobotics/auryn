@@ -1,4 +1,4 @@
-import generate_ras as gras
+import utils.generate_ras as gras
 import os, sys
 
 context={'ncores':8,

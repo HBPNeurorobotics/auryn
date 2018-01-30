@@ -1,4 +1,4 @@
-import utils.jaer_data_loader as jloader
+import jaer_data_loader as jloader
 import numpy as np
 import random
 import struct
