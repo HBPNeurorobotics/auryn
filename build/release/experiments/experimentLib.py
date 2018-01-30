@@ -8,9 +8,9 @@
 # Creation Date : 31-03-2015
 # Last Modified : Mon 10 Apr 2017 08:53:21 PM PDT
 #
-# Copyright : (c) 
+# Copyright : (c)
 # Licence : GPLv2
-#----------------------------------------------------------------------------- 
+#-----------------------------------------------------------------------------
 #
 ### Stand-alone functions only! no custom dependence
 import numpy as np
@@ -194,7 +194,7 @@ def load_data_labels(data_url, labels_url, n_samples=1, randomize= False, nc_per
 
     iv = iv[skip:limit]
     iv_l = iv_l[skip:limit]
-    
+
     if randomize is False:
         #Do not randomize order of test in any case
         iv_seq, iv_l_seq  = iv[:n_samples], iv_l[:n_samples]
@@ -281,9 +281,9 @@ def init_rbp1h_parameters(nv, nc, nh, mean_weight = 0., std_weight = 0.2, seed =
         return {'vh'  : [Wround(Wvh, random = True, **rr),CWvh],
                 'hh'  : [Wround(Whh, random = True, **rr),CWhh],
                 'ho'  : [Wround(Who, random = True, **rr),CWho],
-                'oe'  : [Woe,CWoe],               
-                've'  : [Wve,CWve],               
-                'eo'  : [Weo,CWeo],               
+                'oe'  : [Woe,CWoe],
+                've'  : [Wve,CWve],
+                'eo'  : [Weo,CWeo],
                 'eh'  : [Wround(Weh, random = False, **rr),CWeh]}
 
 
@@ -451,6 +451,7 @@ def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight = 0., std_weight = 0.2, 
     B = np.dot(Weh.T, np.ones(nc))
     Weh = Weh - B/nc
     CWeh = np.ones((nc,nh), dtype='bool')
+
     return {'vh'  : [Wvh,CWvh],
             'hh'  : [Whh,CWhh],
             'ho'  : [Who,CWho],
@@ -520,13 +521,13 @@ def create_cnn_init(base_filename = 'fwmat', **kwargs):
     for k in ['ec2_{0}'.format(i) for i in range(nfeat2)]:
         W,CW = W_CW[k]
         M[k] = to_auryn_wmat('{0}_{1}.mtx'.format(base_filename,k), W, mask = CW)
-         
+
     M.update(M1)
     M.update(M2)
     save_all_fwmat(M, '{0}_'.format(base_filename))
     return M
 
-    
+
 
 
 
@@ -561,7 +562,7 @@ def save_auryn_tiser(filename, tiser, header):
     '''
     Writes a file from a numpy input_vectors (mnist samples and labels)
     '''
-    
+    import pdb; pdb.set_trace()
     np.savetxt(filename,
                tiser,
                fmt = '%f',
@@ -582,11 +583,11 @@ def save_auryn_wmat(filename, W, dimensions=None, mask=None):
     nv = np.shape(W)[0]
     nh = np.shape(W)[1]
 
-    if np.sum(mask) == 0: 
+    if np.sum(mask) == 0:
         mmwrite(filename, [[]]*nv, symmetry='general')
         return
 
-    
+
 
 
     if dimensions is None:
@@ -620,11 +621,11 @@ def to_auryn_wmat(filename, W, dimensions=None, mask=None):
     nv = np.shape(W)[0]
     nh = np.shape(W)[1]
 
-    if np.sum(mask) == 0: 
+    if np.sum(mask) == 0:
         mmwrite(filename, [[]]*nv, symmetry='general')
         return
 
-    
+
 
 
     if dimensions is None:
@@ -691,7 +692,6 @@ def create_data_rbp(
 
     data_vectors = np.concatenate([input_vectors, label_vectors], axis = 1)
 
-
     tiser = create_tiser(data_vectors,
                          wake_duration, #Wake
                          sleep_duration, #Sleep
@@ -719,16 +719,15 @@ def create_data_rbp(
         tiser_data = tiser[:,1:nv-nc+1].copy()
         idx = tiser_data>0
         tiser_data[idx] = (tiser_data[idx]-input_thr)*10000*input_scale
-        tiser_data[-idx] = -10000
+        #import pdb; pdb.set_trace()
+        #changed '-' to '~'
+        tiser_data[~idx] = -10000
         tiser[:,1:nv-nc+1] = tiser_data
         tiser[:,(nv-nc+1):] = (tiser[:,(nv-nc+1):]-.5)*10000
         save_auryn_tiser('inputs/{0}/{1}'.format(output_directory, filename_current), tiser, header)
         SL = tiser
 
         #filename 'inputs/{0}/ecd_modulation_file'.format(directory)
-
-
-
 
     return input_labels, SL
 
@@ -748,7 +747,7 @@ def monitor_to_spikelist(filename, id_list=None):
     if isinstance(filename,str):
         if filename.find('*')>0:
             import glob
-            filenames = glob.glob(filename) 
+            filenames = glob.glob(filename)
         else:
             filenames = [filename]
     else:
@@ -782,10 +781,10 @@ def collect_wmat(directory, con_id):
     from scipy.sparse import csr_matrix
     filenames='{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory) #Uses wierd file naming by auryn
     from scipy.io import mmread
-    a = [] 
+    a = []
     for f in glob.glob(filenames):
         a.append(mmread(f))
-    
+
     if numpy_version_largerthan('1.7.0'):
         return csr_matrix(sum(a))
     else:
@@ -799,14 +798,14 @@ def collect_wmat_auto(directory, con_id):
     from scipy.sparse import csr_matrix
     filenames='{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory) #Uses wierd file naming by auryn
     from scipy.io import mmread
-    a = [] 
+    a = []
     ggf = glob.glob(filenames)
     if len(ggf)==0:
-        return None, None 
+        return None, None
     name = extract_wmat_name(ggf[0])
     for f in ggf:
         a.append(mmread(f))
-    
+
     if numpy_version_largerthan('1.7.0'):
         return csr_matrix(sum(a)),name
     else:
@@ -858,7 +857,7 @@ def write_parameters_rbp(M, context):
 
     if context.has_key('nh1'):
         mmwrite('inputs/{directory}/train/{0}_{1}.mtx'.format('fwmat','hh', **context), M['hh'], symmetry='general')
-        
+
 
     return M
 
@@ -874,7 +873,7 @@ def write_allparameters_rbp(M, context):
     if context.has_key('nh1'):
         print i, 'inputs/{directory}/train/{0}_{1}.mtx'.format('fwmat','hh', **context)
         mmwrite('inputs/{directory}/train/{0}_{1}.mtx'.format('fwmat','hh', **context), M['hh'], symmetry='general')
-        
+
 
     return M
 
@@ -991,9 +990,9 @@ def plot_epochs(n_epochs,  wstats_mean,  wstats_std, acc_hist):
     pylab.figure()
     ax1 = pylab.axes()
     pylab.figure()
-    ax2 = pylab.axes() 
+    ax2 = pylab.axes()
     ax2.plot(ah[:,0], ah[:,1])
-    
+
     for i in range(n_epochs):
         ax1.clear()
         for j in range(4):
@@ -1006,7 +1005,7 @@ def plot_recognition_progress(labels_test, context):
     import pylab
     res = []
     tbin = 10 #must be int
-    time_axis = np.arange(0.,tbin,context['sample_duration_test'])*1000    
+    time_axis = np.arange(0.,tbin,context['sample_duration_test'])*1000
     s = [None]*context['n_samples_test']
     for i in range(context['n_samples_test']):
         print i
@@ -1203,7 +1202,7 @@ def exportAER(spikeLists,
     out = []
     assert format in ['t', 'a'], 'Format must be "a" or "t"'
     ev = pyST.events(atype='logical')
-    
+
     #Translate logical addresses to physical using a mapping
     if isinstance(spikeLists, pyST.SpikeList):
         slrd = spikeLists.raw_data()
@@ -1215,7 +1214,7 @@ def exportAER(spikeLists,
             ev.add_adtmev(mapped_SL)
             # ev.add_adtmev(mapSpikeListAddresses(spikeLists[ch],mappin
             # g).convert(format='[id,time*1000]'))
-             
+
     if debug:
         print("Address encoding took {0} seconds".format(tictoc))
 
@@ -1258,10 +1257,10 @@ def SimSpikingStimulus(stim, time = 1000, t_sim = None, with_labels = True, nc =
                     SLt[i] = pyST.STCreate.regular_generator(stim[t,i],
                                                         jitter=True,
                                                         t_start=t*time,
-                                                        t_stop=(t+1)*time)            
+                                                        t_stop=(t+1)*time)
             if len(SLt.raw_data())>0: SLc = pyST.merge_spikelists(SLc, SLt)
 
-    if len(SLc.raw_data())>0: 
+    if len(SLc.raw_data())>0:
         SL = pyST.merge_spikelists(SLd,SLc)
     else:
         SL = SLd
