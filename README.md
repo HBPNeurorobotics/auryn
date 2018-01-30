@@ -20,7 +20,7 @@ support installed. To download and compile the examples under Ubuntu Linux try:
 
 ```
 sudo apt-get install cmake git build-essential libboost-all-dev
-git@gitlab.com:eneftci/erbp_auryn.git && cd auryn/build/release
+git clone https://ids-git.fzi.de/friedric/erbp.git && cd auryn/build/release
 ./bootstrap.sh && make
 ```
 
