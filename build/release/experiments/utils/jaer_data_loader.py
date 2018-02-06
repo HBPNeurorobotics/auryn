@@ -11,7 +11,6 @@ EVT_DVS = 0  # DVS event type
 EVT_APS = 1  # APS event
 
 
-
 def load_rosbag():
     pass
 
@@ -34,14 +33,14 @@ def load_jaer(datafile='/tmp/aerout.dat', length=0, version=V2, debug=1, camera=
     aeLen = 8  # 1 AE event takes 8 bytes
     readMode = '>II'  # struct.unpack(), 2x ulong, 4B+4B
     td = 0.000001  # timestep is 1us
-    if(camera == 'DVS128'):
+    if (camera == 'DVS128'):
         xmask = 0x00fe
         xshift = 1
         ymask = 0x7f00
         yshift = 8
         pmask = 0x1
         pshift = 0
-    elif(camera == 'DAVIS240'):  # values take from scripts/matlab/getDVS*.m
+    elif (camera == 'DAVIS240'):  # values take from scripts/matlab/getDVS*.m
         xmask = 0x003ff000
         xshift = 12
         ymask = 0x7fc00000
@@ -85,21 +84,20 @@ def load_jaer(datafile='/tmp/aerout.dat', length=0, version=V2, debug=1, camera=
     s = aerdatafh.read(aeLen)
     p += aeLen
 
-    #print (xmask, xshift, ymask, yshift, pmask, pshift)
+    # print (xmask, xshift, ymask, yshift, pmask, pshift)
     while p < length:
         addr, ts = struct.unpack(readMode, s)
         # parse event type
-        if(camera == 'DAVIS240'):
+        if (camera == 'DAVIS240'):
             eventtype = (addr >> eventtypeshift)
         else:  # DVS128
             eventtype = EVT_DVS
 
         # parse event's data
-        if(eventtype == EVT_DVS):  # this is a DVS event
+        if (eventtype == EVT_DVS):  # this is a DVS event
             x_addr = (addr & xmask) >> xshift
             y_addr = (addr & ymask) >> yshift
             a_pol = (addr & pmask) >> pshift
-
 
             if debug >= 3:
                 print("ts->", ts)  # ok
@@ -118,10 +116,12 @@ def load_jaer(datafile='/tmp/aerout.dat', length=0, version=V2, debug=1, camera=
 
     if debug > 0:
         try:
-            print ("read %i (~ %.2fM) AE events, duration= %.2fs" % (len(timestamps), len(timestamps) / float(10 ** 6), (timestamps[-1] - timestamps[0]) * td))
+            print ("read %i (~ %.2fM) AE events, duration= %.2fs" % (
+            len(timestamps), len(timestamps) / float(10 ** 6), (timestamps[-1] - timestamps[0]) * td))
             n = 5
             print ("showing first %i:" % (n))
-            print ("timestamps: %s \nX-addr: %s\nY-addr: %s\npolarity: %s" % (timestamps[0:n], xaddr[0:n], yaddr[0:n], pol[0:n]))
+            print ("timestamps: %s \nX-addr: %s\nY-addr: %s\npolarity: %s" % (
+            timestamps[0:n], xaddr[0:n], yaddr[0:n], pol[0:n]))
         except:
             print ("failed to print statistics")
 
