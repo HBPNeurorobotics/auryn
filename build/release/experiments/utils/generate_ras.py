@@ -92,13 +92,14 @@ def restore_ts_order(timestamps):
 
 
 def write_ras(df_list, exp_directory, test_or_train, ras_file_name):
+    #TODO make parallel
     with open(
         "inputs/{exp_dir}/{test_or_train}/{file_name}.ras".format(exp_dir=exp_directory, test_or_train=test_or_train,
-                                                                  file_name=ras_file_name), "w+") as f:
+                                                                  file_name=ras_file_name), "wb+") as f:
         print('\nwriting {} ras:'.format(test_or_train))
         for df in tqdm(df_list):
             f.write(gen_ras_string(df))
 
 
 def gen_ras_string(df):
-    return ''.join(["{ts:f} {idx}\n".format(ts=ts, idx=idx) for ts, idx in zip(df['ts'].values, df['n_id'].values)])
+    return ''.join(["%f %d\n" % (ts, idx) for ts, idx in zip(df['ts'].values, df['n_id'].values)])
