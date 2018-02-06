@@ -3,20 +3,15 @@ import numpy as np
 import random
 import struct
 import pandas as pd
-import time
 
 from tqdm import tqdm
 
 
-def create_event_data_rbp(n_samples, max_samples, exp_directory, test_or_train, labels_name, randomize=False,
-                          pause_duration=0):
+def create_ras_from_aedat(n_samples, max_samples, exp_directory, test_or_train, labels_name, randomize=False,
+                          pause_duration=0, cache=False):
     if n_samples > max_samples:
         print("{n} has to be smaller than {max}".format(n=n_samples, max=max_samples))
         return
-
-    labels = read_labels(labels_name)
-    max_neuron_id = 128 * 128
-    current_timestamp = 0.
 
     if randomize:
         sample_ids = random.sample(range(max_samples), n_samples)
@@ -24,29 +19,39 @@ def create_event_data_rbp(n_samples, max_samples, exp_directory, test_or_train, 
         sample_ids = range(n_samples)
 
     tot = test_or_train.capitalize()
-
-    t_before = time.clock()
+    labels = read_labels(labels_name)
+    max_neuron_id = 128 * 128
+    current_timestamp = 0.
     df_list = []
-    for i, sample_id in tqdm(enumerate(sample_ids)):
-        timestamps, neuron_id = load_events_from_aedat(
-            "data/{test_or_train}_{exp_dir}/{tot}{s_id}.aedat".format(test_or_train=test_or_train,
-                                                                      exp_dir=exp_directory, s_id=sample_id + 1,
-                                                                      tot=tot))
-        timestamps += current_timestamp
-        df = pd.DataFrame({'ts': timestamps, 'n_id': neuron_id})
 
-        label_spikes = get_label_spikes(timestamps)
-        df2 = pd.DataFrame({'ts': label_spikes, 'n_id': labels[sample_id] + max_neuron_id})
+    print('\nloading {} data:'.format(test_or_train))
+    with pd.HDFStore('data/{exp_dir}.h5'.format(exp_dir=exp_directory)) as store:
+        for sample_id in tqdm(sample_ids):
+            key = '{test_or_train}/m{mod}/s{sample_id}'.format(test_or_train=test_or_train, sample_id=sample_id,
+                                                               mod=sample_id % 10)
+            if cache and key in store:
+                df_concat = store[key]
+            else:
+                timestamps, neuron_id = load_events_from_aedat(
+                    "data/{test_or_train}_{exp_dir}/{tot}{s_id}.aedat".format(test_or_train=test_or_train,
+                                                                              exp_dir=exp_directory, s_id=sample_id + 1,
+                                                                              tot=tot))
+                df = pd.DataFrame({'ts': timestamps, 'n_id': neuron_id})
 
-        df_concat = df.append(df2)
-        df_concat.sort_values(by=['ts'], inplace=True)
-        df_list.append(df_concat)
+                label_spikes = get_label_spikes(timestamps)
+                df2 = pd.DataFrame({'ts': label_spikes, 'n_id': labels[sample_id] + max_neuron_id})
 
-        current_timestamp = df_concat.ts.values[-1] + pause_duration
+                df_concat = df.append(df2)
+                df_concat.sort_values(by=['ts'], inplace=True)
+                if cache:
+                    store[key] = df_concat
 
-    # dfs = pd.concat(df_list)
-    print('time: {t:.3f}s'.format(t=(time.clock() - t_before)))
+            df_concat.ts.add(current_timestamp)
+            df_list.append(df_concat)
+            current_timestamp = df_concat.ts.values[-1] + pause_duration
+
     write_ras(df_list, exp_directory, test_or_train, "input")
+    return current_timestamp - pause_duration
 
 
 def get_label_spikes(timestamps):
@@ -87,11 +92,13 @@ def restore_ts_order(timestamps):
 
 
 def write_ras(df_list, exp_directory, test_or_train, ras_file_name):
-    f = open(
+    with open(
         "inputs/{exp_dir}/{test_or_train}/{file_name}.ras".format(exp_dir=exp_directory, test_or_train=test_or_train,
-                                                                  file_name=ras_file_name), "w+")
-    for df in df_list:
-        for ts, idx in zip(df['ts'].values, df['n_id'].values):
-            f.write("{ts:f} {idx}\n".format(ts=ts, idx=idx))
+                                                                  file_name=ras_file_name), "w+") as f:
+        print('\nwriting {} ras:'.format(test_or_train))
+        for df in tqdm(df_list):
+            f.write(gen_ras_string(df))
 
-    f.close()
+
+def gen_ras_string(df):
+    return ''.join(["{ts:f} {idx}\n".format(ts=ts, idx=idx) for ts, idx in zip(df['ts'].values, df['n_id'].values)])
