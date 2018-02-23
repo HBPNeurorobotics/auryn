@@ -552,8 +552,6 @@ def save_auryn_tiser(filename, tiser, header):
     '''
     Writes a file from a numpy input_vectors (mnist samples and labels)
     '''
-    import pdb;
-    pdb.set_trace()
     np.savetxt(filename,
                tiser,
                fmt='%f',
@@ -721,11 +719,7 @@ def create_data_rbp(
 
 ##### Data Analysis #################
 
-def monitor_to_spikelist(filename, id_list=None):
-    '''
-    Combine Auryn Spike monitor outputs and build a pyNCS SpikeList
-    filename can be a string, a string with a wildcard (parsed with glob.glob) or a list of strings, each file must be the output of a spike monitor.
-    '''
+def get_spikelist(filename):
     from pyNCS import pyST
 
     spikes = np.zeros([0, 2])
@@ -744,6 +738,15 @@ def monitor_to_spikelist(filename, id_list=None):
             V = data[1, :]
             t = data[0, :] * 1000  # Conversion to [ms]
             spikes = np.concatenate([spikes, zip(V, t)])
+    return spikes
+
+
+def monitor_to_spikelist(filename, id_list=None):
+    '''
+    Combine Auryn Spike monitor outputs and build a pyNCS SpikeList
+    filename can be a string, a string with a wildcard (parsed with glob.glob) or a list of strings, each file must be the output of a spike monitor.
+    '''
+    spikes = get_spikelist(filename)
 
     SL = pyST.SpikeList(spikes=spikes, id_list=np.unique(spikes[:, 0]))
 
@@ -819,12 +822,13 @@ def get_spike_count(directory):
 
 
 def collect_gstate(directory, con_id):
-    filenames = '{directory}/coba.*..{0}.*.gstate'.format(con_id,
-                                                          directory=directory)  # Uses wierd file naming by auryn
+    filenames = '{directory}/coba.*..{0}.*.gstate'.format(con_id, directory=directory)
     from scipy.io import mmread
     a = np.zeros([0, 2])  # neuron id, bias, spike count
     for f in glob.glob(filenames):
-        a = np.concatenate([a, np.loadtxt(f, comments='#', skiprows=3)])
+        text = np.loadtxt(f, comments='#', skiprows=3)
+        if text.size != 0:
+            a = np.concatenate([a, text])
     ia = np.argsort(a[:, 0])
     return a[ia]
 
@@ -966,6 +970,23 @@ def process_test_rbp(context):
     T = (context['sample_duration_test'] + context['sample_pause_test']) * 1000
     fr = Sc.firing_rate(T).reshape(context['nc'], context['nc_perlabel'], -1).mean(axis=1)
     return np.argmax(fr, axis=0)
+
+
+def process_test_rate_classification(context, sample_duration_test, labels_test):
+    raw_data = get_spikelist('outputs/{directory}/test/coba.*.out.ras'.format(**context))
+    raw_data[:, 1] = raw_data[:, 1] / 1000
+    split_at = raw_data[:, 1].searchsorted(sample_duration_test)
+    split_raw = np.split(raw_data, split_at[:-1])
+    counter = 0
+    for i, elem in enumerate(split_raw):
+        bins = np.bincount(elem[:, 0].astype(int))
+        if bins.size > 0:
+            label_with_most_spikes = np.argmax(bins)
+        else:
+            label_with_most_spikes = -1
+        if label_with_most_spikes == labels_test[i]:
+            counter += 1
+    return float(counter) / len(labels_test)
 
 
 def process_rasters(directory, N, t_stop, t_sample):

@@ -169,16 +169,17 @@ int main(int ac,char *av[]) {
 	logger->msg("Setting up neuron groups ...",PROGRESS,true);
 
 
-	LinGroup * neurons_err2 = new LinGroup( nout);
-	LinGroup * neurons_err1 = new LinGroup( nout);
-	SRM0Group * neurons_vis = new SRM0Group( nvis);
-	SIFGroup * neurons_out = new SIFGroup( nout);
-	SIFGroup * neurons_hid = new SIFGroup( nhid);
+	LinGroup * neurons_err2 = new LinGroup(nout);
+	LinGroup * neurons_err1 = new LinGroup(nout);
+	// SRM0Group * neurons_vis = new SRM0Group(nvis);
+	FileInputGroup * neurons_vis = new FileInputGroup(nvis, ip_v, false, 0.);
+	SIFGroup * neurons_out = new SIFGroup(nout);
+	SIFGroup * neurons_hid = new SIFGroup(nhid);
 
 	logger->msg("Done setting up neuron groups ...",PROGRESS,true);
-    logger->msg("Setting up Pattern Stimulator ...",PROGRESS,true);
-    PatternStimulator * stim = new PatternStimulator(neurons_vis, ip_v, ipat_file.c_str(), 1., nvis);
-	logger->msg("Done setting up Pattern Stimulator ...",PROGRESS,true);
+    // logger->msg("Setting up Pattern Stimulator ...",PROGRESS,true);
+    // PatternStimulator * stim = new PatternStimulator(neurons_vis, ip_v, ipat_file.c_str(), 1., nvis);
+	// logger->msg("Done setting up Pattern Stimulator ...",PROGRESS,true);
 
     if(sigma>0){
         PoissonStimulator * ps_hid = new PoissonStimulator( neurons_hid, 1000., sigma);
@@ -186,10 +187,8 @@ int main(int ac,char *av[]) {
     } else {
         logger->msg("No PoissonStimulator ...",PROGRESS,true);
     }
-	printf("prosyb %f", prob_syn);
 
 	neurons_out->set_refractory_period(3.9e-3);
-	neurons_vis->set_refractory_period(4.0e-3);
 	neurons_hid->set_refractory_period(3.9e-3); // minimal ISI 5.1ms
 
 	neurons_out->set_bg_currents(0.0e-3); // corresponding to 200pF for C=200pF and tau=20ms
@@ -293,13 +292,13 @@ int main(int ac,char *av[]) {
     if (record){
         BinaryStateMonitor * dend_mon = new BinaryStateMonitor( neurons_out, 0, "dendrite", sys->fn("bdendrite") );
         BinaryStateMonitor * mem_mon = new BinaryStateMonitor( neurons_out, 0, "mem", sys->fn("bmem") );
-        BinaryStateMonitor * vis_mem_mon = new BinaryStateMonitor( neurons_vis, 127, "bg_current", sys->fn("bmemvis") );
+        //BinaryStateMonitor * vis_mem_mon = new BinaryStateMonitor( neurons_vis, 127, "bg_current", sys->fn("bmemvis") );
         BinaryStateMonitor * g_ampa_mon = new BinaryStateMonitor( neurons_out, 0, "g_ampa", sys->fn("bampa") );
         BinaryStateMonitor * errmon = new BinaryStateMonitor( neurons_err1, 0, "mem", sys->fn("mem") );
         oss.str("");
         oss << outputfile << "v.w";
         WeightMonitor * smon = new WeightMonitor( con_ho, oss.str(), auryn_timestep);
-        smon->add_to_list(32,0);
+        smon->add_to_list(0,0);
     }
 
 	if ( record_rasters ) {
