@@ -405,14 +405,14 @@ def init_cnn2L_parameters(nv, nc, nfeat1, nfeat2, nh, mean_weight=0., std_weight
     return ret_dict
 
 
-def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight=0., std_weight=0.2, seed=0, **kwargs):
+def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight=0., std_weight=0.2, seed=0, recurrent=False, **kwargs):
     '''
     Initialize feed-forward deep neural network for random back-propagation parameters with 1 hidden layer
     nv: number of visible neurons
     nc: number of output neurons
     nh: number of hidden neurons
     '''
-    print std_weight, nc, nh1, nh2
+    print std_weight, nc, nh1, nh2, recurrent
     nh = nh1 + nh2
     np.random.seed(seed)
     avh = np.sqrt(std_weight / (nv + nh1))
@@ -427,6 +427,9 @@ def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight=0., std_weight=0.2, seed
     ahh1 = np.sqrt(std_weight / (nh))
     Whh[:nh1, nh1:nh1 + nh2] = np.random.uniform(low=-ahh1, high=+ahh1, size=(nh1, nh2))
     CWhh[:nh1, nh1:nh1 + nh2] = True
+    if recurrent:
+        Whh[nh1:nh1 + nh2, :nh1] = np.random.uniform(low=-ahh1, high=+ahh1, size=(nh1, nh2))
+        CWhh[nh1:nh1 + nh2, :nh1] = True
 
     Wvh = np.random.uniform(low=-avh, high=+avh, size=(nv, nh1))
     Wvh[(nv - nc):, :] = 0
@@ -972,12 +975,32 @@ def process_test_rbp(context):
     return np.argmax(fr, axis=0)
 
 
-def process_test_rate_classification(context, sample_duration_test, labels_test):
+def process_test_classification(context, sample_duration_test, labels_test):
     raw_data = get_spikelist('outputs/{directory}/test/coba.*.out.ras'.format(**context))
     raw_data[:, 1] = raw_data[:, 1] / 1000
     split_at = raw_data[:, 1].searchsorted(sample_duration_test)
     split_raw = np.split(raw_data, split_at[:-1])
     counter = 0
+    rate_counter = rate_classification(counter, labels_test, split_raw)
+    rate_class = float(rate_counter) / len(labels_test)
+    first_counter = first_classification(counter, labels_test, split_raw)
+    first_class = float(first_counter) / len(labels_test)
+    print('rate_classification: {}'.format(rate_class))
+    print('first_classification: {}'.format(first_class))
+
+    return rate_class, first_class
+
+
+def first_classification(counter, labels_test, split_raw):
+    for i, elem in enumerate(split_raw):
+        if elem.size > 0:
+            first_spike_id = int(elem[:, 0][0])
+            if first_spike_id == labels_test[i]:
+                counter += 1
+    return counter
+
+
+def rate_classification(counter, labels_test, split_raw):
     for i, elem in enumerate(split_raw):
         bins = np.bincount(elem[:, 0].astype(int))
         if bins.size > 0:
@@ -986,7 +1009,9 @@ def process_test_rate_classification(context, sample_duration_test, labels_test)
             label_with_most_spikes = -1
         if label_with_most_spikes == labels_test[i]:
             counter += 1
-    return float(counter) / len(labels_test)
+        if i < 10:
+            print bins
+    return counter
 
 
 def process_rasters(directory, N, t_stop, t_sample):

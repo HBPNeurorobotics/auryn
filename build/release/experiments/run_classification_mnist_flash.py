@@ -41,7 +41,10 @@ def run_classify(context, labels_test, sample_duration_test):
     if ret == 0:
         print('ran')
 
-    return elib.process_test_rate_classification(context, sample_duration_test, labels_test)
+    plotter.plot_ras_spikes('outputs/dvs_mnist_flash/test/coba.*.{}.ras', start=0, end=9,
+                            layers=['out'], res=32 * 32, save=True)
+    # first 5 labels: 7,2,1,0,4
+    return elib.process_test_classification(context, sample_duration_test, labels_test)
 
 
 def run_learn(context):
@@ -76,14 +79,15 @@ def run_learn(context):
     return ret, run_cmd
 
 
-context = {'ncores': 8,
+context = {'ncores': 4,
            'directory': 'dvs_mnist_flash',
            'nv': 32 * 32 + 10,  # Include nc
            'nh': 400,
            'nh2': 200,
            'nh1': 200,
            'nc': 10,
-           'eta': 6.0e-4,
+           'eta':  1.0e-4,
+           'eta_decay': 1.,
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -101,14 +105,14 @@ context = {'ncores': 8,
            'min_p': 1e-5,
            'max_p': .98,
            'binary': False,
-           'sample_pause_train': 2.,
-           'sample_pause_test': 2.,
+           'sample_pause_train': 1.,
+           'sample_pause_test': 1.,
            'sigma': 0e-3,
            'max_samples_train': 60000,
            'max_samples_test': 10000,
-           'n_samples_train': 10,
-           'n_samples_test': 1000,
-           'n_epochs': 0,  # 60
+           'n_samples_train': 5000,
+           'n_samples_test': 10000,
+           'n_epochs': 10,  # 60
            'n_loop': 1,
            'prob_syn': 1.,
            'init_mean_bias_v': -.1,
@@ -120,18 +124,19 @@ context = {'ncores': 8,
            'input_thr': .43,
            'input_scale': .5,
            'mean_weight': .0,
-           'std_weight': 7.0,
-           'test_every': 4}
+           'std_weight': 0.3,
+           'test_every': 5,
+           'recurrent': False}
 
 context['eta_orig'] = context['eta']
 
 if __name__ == '__main__':
     try:
         last_perf = 0.1
-        init = False
+        init = True
         new_test_data = False
         test = False
-        save = False
+        save = True
 
         test_labels_name = context['test_labels_name']
         train_labels_name = context['train_labels_name']
@@ -180,8 +185,10 @@ if __name__ == '__main__':
         acc_hist = []
         spkcnt = [None for i in range(n_epochs)]
 
-        plotter.plot_ras_spikes_whole('outputs/dvs_mnist_flash/train/coba.*.{}.ras', start=0, end=20,
-                                      layers=['vis', 'hid', 'out'], res=32 * 32, save=False)
+        if test:
+            res = run_classify(context, labels_test, sample_duration_test)
+            acc_hist.append([0, res])
+            print res
 
         for i in xrange(n_epochs):
             sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train, max_samples_train,
@@ -194,11 +201,15 @@ if __name__ == '__main__':
             print(context['simtime_train'])
             # print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
             ret, run_cmd = run_learn(context)
-            # context['eta'] = context['eta'] - eta_decay
+
+            plotter.plot_ras_spikes('outputs/dvs_mnist_flash/train/coba.*.{}.ras', start=0, end=9,
+                                    layers=['vis', 'hid', 'out'], res=32 * 32, save=True)
+
+            context['eta'] = context['eta'] * context['eta_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
             M = elib.process_parameters_rbp_dual(context)
-            plotter.plot_ras_spikes('outputs/{directory}/train/coba.*.c.ras', 32, 0, 10, i, True)
 
+            plotter.plot_weight_matrix('inputs/dvs_mnist_flash/train/fwmat_{}.mtx', save=True)
             if test_every > 0:
                 if i % test_every == test_every - 1:
                     res = run_classify(context, labels_test, sample_duration_test)
@@ -207,11 +218,6 @@ if __name__ == '__main__':
                     if res > last_perf:
                         last_perf = res
                         bestM = elib.read_allparamters_dual(context)
-
-        if test:
-            res = run_classify(context, labels_test, sample_duration_test)
-            acc_hist.append([0, res])
-            print res
 
         if save:
             M = elib.read_allparamters_dual(context)

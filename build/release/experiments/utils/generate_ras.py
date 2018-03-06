@@ -3,6 +3,7 @@ import numpy as np
 import random
 import struct
 import pandas as pd
+import os
 
 from tqdm import tqdm
 
@@ -12,6 +13,9 @@ def create_ras_from_aedat(n_samples, max_samples, exp_directory, test_or_train, 
     if n_samples > max_samples:
         print("{n} has to be smaller than {max}".format(n=n_samples, max=max_samples))
         return
+
+    filename = "input"
+    os.system('rm inputs/{}/{}/{}.ras'.format(exp_directory, test_or_train, filename))
 
     if randomize:
         sample_ids = random.sample(range(max_samples), n_samples)
@@ -54,7 +58,7 @@ def create_ras_from_aedat(n_samples, max_samples, exp_directory, test_or_train, 
             label_list.append(labels[sample_id])
             df_concat.ts = df_concat.ts.add(current_timestamp)
             #  df_list.append(df_concat)
-            write_on_ras(df_concat, exp_directory, test_or_train, "input")
+            write_on_ras(df_concat, exp_directory, test_or_train, filename)
             current_timestamp = df_concat.ts.values[-1] + pause_duration
             sample_duration_list.append(current_timestamp)
 
@@ -67,7 +71,7 @@ def get_label_spikes(timestamps):
     current_timestamp = timestamps[-1]
     sample_length = current_timestamp - first_timestamp
     assert first_timestamp < current_timestamp, "{} vs {}".format(first_timestamp, current_timestamp)
-    return np.sort(np.random.sample(np.random.poisson(sample_length * 250))) * sample_length + first_timestamp
+    return np.sort(np.random.sample(np.random.poisson(sample_length * 2500))) * sample_length + first_timestamp
 
 
 def read_labels(labels_name):
