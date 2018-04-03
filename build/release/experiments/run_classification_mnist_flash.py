@@ -41,7 +41,7 @@ def run_classify(context, labels_test, sample_duration_test):
     if ret == 0:
         print('ran')
 
-    plotter.plot_ras_spikes('outputs/dvs_mnist_flash/test/coba.*.{}.ras', start=0, end=9,
+    plotter.plot_ras_spikes('outputs/{}/test/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=9,
                             layers=['out'], res=32 * 32, save=True)
     # first 5 labels: 7,2,1,0,4
     return elib.process_test_classification(context, sample_duration_test, labels_test)
@@ -110,9 +110,9 @@ context = {'ncores': 4,
            'sigma': 0e-3,
            'max_samples_train': 60000,
            'max_samples_test': 10000,
-           'n_samples_train': 5000,
+           'n_samples_train': 5,
            'n_samples_test': 10000,
-           'n_epochs': 10,  # 60
+           'n_epochs': 2,  # 60
            'n_loop': 1,
            'prob_syn': 1.,
            'init_mean_bias_v': -.1,
@@ -124,19 +124,19 @@ context = {'ncores': 4,
            'input_thr': .43,
            'input_scale': .5,
            'mean_weight': .0,
-           'std_weight': 0.3,
-           'test_every': 5,
+           'std_weight': 0.1,
+           'test_every': 10,
            'recurrent': False}
 
 context['eta_orig'] = context['eta']
 
 if __name__ == '__main__':
     try:
-        last_perf = 0.1
+        last_perf = (0.1, 0.1)
         init = True
-        new_test_data = False
+        new_test_data = True
         test = False
-        save = True
+        save = False
 
         test_labels_name = context['test_labels_name']
         train_labels_name = context['train_labels_name']
@@ -158,11 +158,10 @@ if __name__ == '__main__':
         if new_test_data:
             os.system('rm -rf inputs/{directory}/test/'.format(**context))
             os.system('mkdir -p inputs/{directory}/test/'.format(**context))
-            sample_duration_test, labels_test = gras.create_ras_from_aedat(n_samples_test, max_samples_test,
-                                                                           context['directory'], "test",
+            sample_duration_test, labels_test = gras.create_ras_from_aedat(n_samples_test, context['directory'], "test",
                                                                            test_labels_name, randomize=False,
                                                                            pause_duration=context['sample_pause_test'],
-                                                                           cache=True)
+                                                                           cache=False)
             context['simtime_test'] = sample_duration_test[-1]
             print(context['simtime_test'])
             with open('inputs/{directory}/test/simtime.txt'.format(**context), 'w+') as simtime_file:
@@ -188,33 +187,28 @@ if __name__ == '__main__':
         if test:
             res = run_classify(context, labels_test, sample_duration_test)
             acc_hist.append([0, res])
-            print res
 
         for i in xrange(n_epochs):
-            sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train, max_samples_train,
-                                                                             context['directory'], "train",
-                                                                             train_labels_name, randomize=True,
+            sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train, context['directory'],
+                                                                             "train", train_labels_name, randomize=True,
                                                                              pause_duration=context[
-                                                                                 'sample_pause_train'],
-                                                                             cache=True)
+                                                                                 'sample_pause_train'], cache=False)
             context['simtime_train'] = sample_duration_train[-1]
-            print(context['simtime_train'])
-            # print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
+            print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
             ret, run_cmd = run_learn(context)
 
-            plotter.plot_ras_spikes('outputs/dvs_mnist_flash/train/coba.*.{}.ras', start=0, end=9,
+            plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=9,
                                     layers=['vis', 'hid', 'out'], res=32 * 32, save=True)
 
             context['eta'] = context['eta'] * context['eta_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
             M = elib.process_parameters_rbp_dual(context)
 
-            plotter.plot_weight_matrix('inputs/dvs_mnist_flash/train/fwmat_{}.mtx', save=True)
+            plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
             if test_every > 0:
                 if i % test_every == test_every - 1:
                     res = run_classify(context, labels_test, sample_duration_test)
                     acc_hist.append([i, res])
-                    print res
                     if res > last_perf:
                         last_perf = res
                         bestM = elib.read_allparamters_dual(context)
