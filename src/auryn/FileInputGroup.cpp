@@ -95,8 +95,8 @@ void FileInputGroup::load_spikes(std::string filename)
 	oss << get_log_name() << ":: Finished loading " << input_spikes.size() 
 		<< " spike events";
 	logger->info(oss.str());
-
 	spike_iter = input_spikes.begin();
+    logger->msg("Spikes loaded ...",PROGRESS,true);
 }
 
 void FileInputGroup::sort_spikes()

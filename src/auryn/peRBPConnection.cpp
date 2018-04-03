@@ -105,6 +105,7 @@ AurynWeight peRBPConnection::dw(NeuronID post)
 	NeuronID translated_spike = dst->global2rank(post);
   if ( vmodstate->get(translated_spike)<ghigh)
     if ( vmodstate->get(translated_spike)>glow){
+      //logger->msg(std::to_string(modstate->get(translated_spike)),PROGRESS,true);
       return eta*modstate->get(translated_spike);
     }
   return 0.;
