@@ -48,12 +48,12 @@ def mtx_file_to_matrix(filepath):
 
 
 def get_weight_stats(path, context, connections=['vh', 'hh', 'ho']):
-    reccurent = context['recurrent']
+    recurrent = context['recurrent']
     nh1 = context['nh1']
     stats = {}
     for connection in connections:
         weight_matrix = mtx_file_to_matrix(path.format(connection))
-        if reccurent and connection == 'hh':
+        if recurrent and connection == 'hh':
             stats['h1h2'] = [(np.mean(weight_matrix[:nh1]), np.std(weight_matrix[:nh1]))]
             stats['h2h1'] = [(np.mean(weight_matrix[nh1:]), np.std(weight_matrix[nh1:]))]
         else:

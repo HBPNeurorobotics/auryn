@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 
 def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='', randomize=False, pause_duration=0,
-                          cache=False):
+                          event_polarity='on', cache=False, max_neuron_id=32 * 32):
     filename = "input"
     os.system('rm inputs/{}/{}/{}.ras'.format(exp_directory, test_or_train, filename))
 
@@ -31,14 +31,14 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
     else:
         sample_names = [sample_names[i] for i in sample_ids]
 
-    max_neuron_id = 32 * 32
     current_timestamp = 0.
     label_list = []
     sample_duration_list = []
 
     print('\nloading {} data:'.format(test_or_train))
     with pd.HDFStore(
-            'data/{exp_dir}/{test_or_train}.h5'.format(exp_dir=exp_directory, test_or_train=test_or_train)) as store:
+            'data/{exp_dir}/{test_or_train}_{event_pol}.h5'.format(exp_dir=exp_directory, test_or_train=test_or_train,
+                                                                   event_pol=event_polarity)) as store:
         for i, sample_id in enumerate(tqdm(sample_ids)):
             key = 'm{mod}/s{sample_id}'.format(sample_id=sample_id,
                                                mod=sample_id % 10)
@@ -49,7 +49,12 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
                     sample_names[i], version)
                 df = pd.DataFrame({'ts': timestamps, 'n_id': neuron_id, 'pol': pol})
 
-                df = df[df.pol == 1]
+                if event_polarity == 'on':
+                    df = df[df.pol == 1]
+                elif event_polarity == 'off':
+                    df = df[df.pol == 0]
+                elif event_polarity == 'dual':
+                    df.loc[df.pol == 1, 'n_id'] += int(max_neuron_id / 2)
                 df = df.drop('pol', axis=1)
 
                 df2 = get_label_spikes_df(labels[i], max_neuron_id, timestamps[-1], 2500)
