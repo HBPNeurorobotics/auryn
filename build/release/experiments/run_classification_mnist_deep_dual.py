@@ -16,6 +16,8 @@ import os, sys
 import getopt
 import experimentTools as et
 from pylab import *
+import utils.erbp_plotter as plotter
+import utils.file_io as fio
 
 
 def run_classify(context, labels_test):
@@ -49,6 +51,8 @@ def run_classify(context, labels_test):
     if ret == 0:
         print 'ran'
 
+    plotter.plot_ras_spikes('outputs/{}/test/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=2,
+                            layers=['out'], res=28 * 28, number_of_classes=context['nc'], save=True)
     return float(sum(process_test_rbp(context) == labels_test)) / len(labels_test)
 
 
@@ -60,9 +64,9 @@ def run_learn(context):
         --learn true \
         --simtime {tsimtime_train} \
         --stimtime {simtime_train} \
-        --record_full false \
-        --record_rasters false \
-        --record_rates false \
+        --record_full true \
+        --record_rasters true \
+        --record_rates true \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
         --prob_syn {prob_syn}\
@@ -88,7 +92,7 @@ def run_learn(context):
 # Parameters (move to json or similar at some point)
 
 
-context = {'ncores': 8,
+context = {'ncores': 4,
            'directory': 'mnist_online_deep_dual_regate',
            'nv': 784 + 10,  # Include nc
            'nh': 400,
@@ -119,7 +123,7 @@ context = {'ncores': 8,
            'sample_duration_test': .4,  # Includes pause,
            'sample_pause_test': 0.,
            'sigma': 0e-3,
-           'n_samples_train': 50000,
+           'n_samples_train': 500,
            'n_samples_test': 10000,
            'n_epochs': 10,  # 60
            'n_loop': 1,
@@ -136,7 +140,8 @@ context = {'ncores': 8,
            'test_labels_url': 'data/t10k-labels-idx1-ubyte',
            'train_data_url': 'data/train-images-idx3-ubyte',
            'train_labels_url': 'data/train-labels-idx1-ubyte',
-           'test_every': 5}  # never test
+           'test_every': 2,
+           'recurrent': False}  # never test
 
 context['eta_orig'] = context['eta']
 
@@ -144,6 +149,17 @@ context['eta_orig'] = context['eta']
 def read_file(filename, context):
     os.system('../tools/aubs -i outputs/{directory}/train/{0} -o /tmp/h'.format(filename, **context))
     return np.loadtxt('/tmp/h')
+
+
+def update_weight_stats():
+    global weight_stats
+    stat_dict = (
+        fio.get_weight_stats('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), context))
+    if len(weight_stats) > 0:
+        for key in stat_dict.keys():
+            weight_stats[key] += stat_dict[key]
+    else:
+        weight_stats = stat_dict
 
 
 if __name__ == '__main__':
@@ -174,11 +190,11 @@ if __name__ == '__main__':
 
     context['nc_perlabel'] = context['nc'] / 10
     context['simtime_train'] = context['n_samples_train'] * (
-                context['sample_duration_train'] + context['sample_pause_train'])
+            context['sample_duration_train'] + context['sample_pause_train'])
     context['tsimtime_train'] = context['n_samples_train'] * (
-                context['sample_duration_train'] + context['sample_pause_train'])
+            context['sample_duration_train'] + context['sample_pause_train'])
     context['simtime_test'] = context['n_samples_test'] * (
-                context['sample_duration_test'] + context['sample_pause_test'])
+            context['sample_duration_test'] + context['sample_pause_test'])
 
     n_samples_train = context['n_samples_train']
     n_samples_test = context['n_samples_test']
@@ -223,6 +239,7 @@ if __name__ == '__main__':
         eta_decay = 0
 
     acc_hist = []
+    weight_stats = {}
 
     context['seed'] = 0
     spkcnt = [None for i in range(n_epochs)]
@@ -239,11 +256,21 @@ if __name__ == '__main__':
                                            **context)
 
         ret, run_cmd = run_learn(context)
+
+        plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'), start=0,
+                                end=2,
+                                layers=['vis', 'hid', 'out'], res=28 * 28, number_of_classes=context['nc'],
+                                save=True)
+
         context['eta'] = context['eta'] - eta_decay
         spkcnt[i] = get_spike_count('outputs/{directory}/train'.format(**context))
 
         M = process_parameters_rbp_dual(context)
 
+        plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
+        plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
+                                      nh1=context['nh1'], save=True)
+        update_weight_stats()
         # Monitor SBM progress
         if test_every > 0:
             if i % test_every == test_every - 1:
@@ -262,6 +289,8 @@ if __name__ == '__main__':
         res = run_classify(context, labels_test)
         acc_hist.append([0, res])
         print res
+
+    plotter.plot_weight_stats(weight_stats, save=True)
     #
     M = read_allparamters_dual(context)
     d = et.mksavedir()

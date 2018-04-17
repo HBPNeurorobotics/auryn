@@ -232,7 +232,7 @@ if __name__ == '__main__':
 
         plotter.plot_weight_stats(weight_stats, save=True)
         if len(acc_hist) > 0:
-            plotter.plot_accuracy(acc_hist, save=True)
+            plotter.plot_accuracy_rate_first(acc_hist, save=True)
 
         if save:
             M = elib.read_allparamters_dual(context)

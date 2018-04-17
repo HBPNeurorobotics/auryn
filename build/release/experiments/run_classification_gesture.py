@@ -42,7 +42,7 @@ def run_classify(context, labels_test, sample_duration_test):
     if ret == 0:
         print('ran')
 
-    plotter.plot_ras_spikes('outputs/{}/test/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=9,
+    plotter.plot_ras_spikes('outputs/{}/test/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=15,
                             layers=['out'], res=32 * 32, number_of_classes=context['nc'], save=True)
     # first 5 labels: 7,2,1,0,4
     return elib.process_test_classification(context, sample_duration_test, labels_test)
@@ -83,12 +83,12 @@ def run_learn(context):
 context = {'ncores': 4,
            'directory': 'dvs_gesture_split',
            'nv': 32 * 32 + 12,  # Include nc
-           'nh': 600,
-           'nh2': 300,
-           'nh1': 300,
+           'nh': 400,
+           'nh2': 200,
+           'nh1': 200,
            'nc': 12,
-           'eta': 1.0e-5,
-           'eta_decay': 1.,
+           'eta': 1e-07,
+           'eta_decay': 0.9,
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -111,11 +111,11 @@ context = {'ncores': 4,
            'sigma': 0e-3,
            'max_samples_train': 1176,  # useless
            'max_samples_test': 288,  # useless
-           'n_samples_train': 300,
-           'n_samples_test': 288,
-           'n_epochs': 3,  # 60
+           'n_samples_train': 1176,  # 1176
+           'n_samples_test': 288,  # 288
+           'n_epochs': 3,  # 10
            'n_loop': 1,
-           'prob_syn': 1.0,
+           'prob_syn': 0.6,
            'init_mean_bias_v': -.1,
            'init_mean_bias_h': -.1,
            'init_std_bias_v': 1e-32,
@@ -123,9 +123,10 @@ context = {'ncores': 4,
            'input_thr': .43,
            'input_scale': .5,
            'mean_weight': 0.0,  # useless
-           'std_weight': 0.1,
+           'std_weight': 0.3,
            'test_every': 1,
-           'recurrent': False}
+           'recurrent': True,
+           'event_polarity': 'both'}
 
 context['eta_orig'] = context['eta']
 
@@ -145,8 +146,8 @@ if __name__ == '__main__':
     try:
         last_perf = (0.0, 0.0)
         init = True
-        new_test_data = True
-        test = False
+        new_test_data = False
+        test = True
         save = True
 
         max_samples_train = context['max_samples_train']
@@ -171,6 +172,7 @@ if __name__ == '__main__':
                                                                            context['directory'], "test",
                                                                            randomize=False,
                                                                            pause_duration=context['sample_pause_test'],
+                                                                           event_polarity=context['event_polarity'],
                                                                            cache=True)
             context['simtime_test'] = sample_duration_test[-1]
             print(context['simtime_test'])
@@ -184,7 +186,7 @@ if __name__ == '__main__':
                 if int(read_n_samples) != n_samples_test:
                     print("Current test ras file does not fit the number of test samples.")
                     sys.exit()
-                labels_test = file_string_list[1][1:-1].split(',')
+                labels_test = np.array(file_string_list[1][1:-1].split(','), dtype=int)
                 sample_duration_test = np.array(file_string_list[2][1:-1].split(','), dtype=float)
                 context['simtime_test'] = sample_duration_test[-1]
                 print(context['simtime_test'])
@@ -207,6 +209,7 @@ if __name__ == '__main__':
                                                                              randomize=True,
                                                                              pause_duration=context[
                                                                                  'sample_pause_train'],
+                                                                             event_polarity=context['event_polarity'],
                                                                              cache=True)
             context['simtime_train'] = sample_duration_train[-1]
             print(context['simtime_train'])
@@ -214,8 +217,9 @@ if __name__ == '__main__':
             ret, run_cmd = run_learn(context)
 
             plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'), start=0,
-                                    end=10,
-                                    layers=['vis', 'hid', 'out'], res=32 * 32, number_of_classes=context['nc'], save=True)
+                                    end=15,
+                                    layers=['vis', 'hid', 'out'], res=32 * 32, number_of_classes=context['nc'],
+                                    save=True)
 
             context['eta'] = context['eta'] * context['eta_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
@@ -235,7 +239,7 @@ if __name__ == '__main__':
 
         plotter.plot_weight_stats(weight_stats, save=True)
         if len(acc_hist) > 0:
-            plotter.plot_accuracy(acc_hist, save=True)
+            plotter.plot_accuracy_rate_first(acc_hist, save=True)
 
         if save:
             M = elib.read_allparamters_dual(context)
