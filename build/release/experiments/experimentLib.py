@@ -18,10 +18,10 @@ import sys, os, glob
 import getopt
 import matplotlib
 import pylab
+import pandas as pd
 
 
 def pandas_loadtxt_2d(f, delimiter=' ', *args, **kwargs):
-    import pandas as pd
     try:
         out = pd.read_csv(f, *args, delimiter=delimiter, **kwargs).values[:, [0, 1]]
         return out
@@ -723,8 +723,6 @@ def create_data_rbp(
 ##### Data Analysis #################
 
 def get_spikelist(filename):
-    from pyNCS import pyST
-
     spikes = np.zeros([0, 2])
     if isinstance(filename, str):
         if filename.find('*') > 0:
@@ -745,6 +743,7 @@ def get_spikelist(filename):
 
 
 def monitor_to_spikelist(filename, id_list=None):
+    from pyNCS import pyST
     '''
     Combine Auryn Spike monitor outputs and build a pyNCS SpikeList
     filename can be a string, a string with a wildcard (parsed with glob.glob) or a list of strings, each file must be the output of a spike monitor.
@@ -975,43 +974,58 @@ def process_test_rbp(context):
     return np.argmax(fr, axis=0)
 
 
-def process_test_classification(context, sample_duration_test, labels_test):
+def get_confusion_matrix(pred_labels, actual_labels, normalized=False, margins=False):
+    y_actu = pd.Series(actual_labels, name='Actual')
+    y_pred = pd.Series(pred_labels, name='Predicted')
+    df_confusion = pd.crosstab(y_actu, y_pred, margins=margins)
+    if normalized:
+        confusion_matrix = df_confusion.astype('float').values / df_confusion.sum(axis=1)[:, None]
+    else:
+        confusion_matrix = df_confusion.as_matrix()
+    return confusion_matrix
+
+
+def process_test_classification(context, sample_duration_test, actual_labels):
     raw_data = get_spikelist('outputs/{directory}/test/coba.*.out.ras'.format(**context))
     raw_data[:, 1] = raw_data[:, 1] / 1000
     split_at = raw_data[:, 1].searchsorted(sample_duration_test)
     split_raw = np.split(raw_data, split_at[:-1])
-    counter = 0
-    rate_counter = rate_classification(counter, labels_test, split_raw)
-    rate_class = float(rate_counter) / len(labels_test)
-    first_counter = first_classification(counter, labels_test, split_raw)
-    first_class = float(first_counter) / len(labels_test)
+
+    pred_rate_labels = get_rate_prediction(split_raw)
+    pred_first_labels = get_first_prediction(split_raw)
+
+    rate_class = classification(pred_rate_labels, actual_labels)
+    first_class = classification(pred_first_labels, actual_labels)
+
+    rate_confusion_data_frame = get_confusion_matrix(pred_rate_labels, actual_labels, normalized=True)
+    first_confusion_data_frame = get_confusion_matrix(pred_first_labels, actual_labels, normalized=True)
+
     print('rate_classification: {}'.format(rate_class))
     print('first_classification: {}'.format(first_class))
-
-    return rate_class, first_class
-
-
-def first_classification(counter, labels_test, split_raw):
-    for i, elem in enumerate(split_raw):
-        if elem.size > 0:
-            first_spike_id = int(elem[:, 0][0])
-            if first_spike_id == labels_test[i]:
-                counter += 1
-    return counter
+    return rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame
 
 
-def rate_classification(counter, labels_test, split_raw):
-    for i, elem in enumerate(split_raw):
+def get_rate_prediction(split_raw):
+    predicted_labels = []
+    for elem in split_raw:
         bins = np.bincount(elem[:, 0].astype(int))
         if bins.size > 0:
-            label_with_most_spikes = np.argmax(bins)
+            predicted_labels.append(np.argmax(bins))
         else:
-            label_with_most_spikes = -1
-        if label_with_most_spikes == labels_test[i]:
-            counter += 1
-        if i < 10:
-            print bins
-    return counter
+            predicted_labels.append(-1)
+    return predicted_labels
+
+
+def get_first_prediction(split_raw):
+    prediction_labels = []
+    for elem in split_raw:
+        if elem.size > 0:
+            prediction_labels.append(int(elem[:, 0][0]))
+    return prediction_labels
+
+
+def classification(pred_labels, labels_test):
+    return float(len(filter(lambda x: x[0] == x[1], zip(pred_labels, labels_test)))) / len(labels_test)
 
 
 def process_rasters(directory, N, t_stop, t_sample):
