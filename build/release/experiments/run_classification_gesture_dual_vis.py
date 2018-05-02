@@ -49,8 +49,8 @@ def run_classify(context, labels_test, sample_duration_test):
     # first 5 labels: 7,2,1,0,4
     rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame = elib.process_test_classification(
         context, sample_duration_test, labels_test)
-    plotter.plot_confusion_matrix(rate_confusion_data_frame, title='Rate confusion matrix', save=True)
-    plotter.plot_confusion_matrix(first_confusion_data_frame, title='First confusion matrix', save=True)
+    plotter.plot_confusion_matrix(rate_confusion_data_frame, save=True)
+    plotter.plot_confusion_matrix(first_confusion_data_frame, save=True)
     return rate_class, first_class
 
 
@@ -93,8 +93,8 @@ context = {'ncores': 4,
            'nh2': 200,
            'nh1': 200,
            'nc': 12,
-           'eta': 1e-05,
-           'eta_decay': 1.,
+           'eta': 6e-04,
+           'eta_decay': 0.9,
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -117,11 +117,11 @@ context = {'ncores': 4,
            'sigma': 0e-3,
            'max_samples_train': 1176,  # useless
            'max_samples_test': 288,  # useless
-           'n_samples_train': 10,  # 1176
+           'n_samples_train': 1176,  # 1176
            'n_samples_test': 288,  # 288
-           'n_epochs': 1,  # 10
+           'n_epochs': 30,  # 10
            'n_loop': 1,
-           'prob_syn': 1.,
+           'prob_syn': 0.65,
            'init_mean_bias_v': -.1,
            'init_mean_bias_h': -.1,
            'init_std_bias_v': 1e-32,
@@ -132,7 +132,8 @@ context = {'ncores': 4,
            'std_weight': 7.,
            'test_every': 1,
            'recurrent': False,
-           'event_polarity': 'dual'}
+           'event_polarity': 'dual',
+           'delayed': False}
 
 context['eta_orig'] = context['eta']
 
@@ -151,7 +152,7 @@ def update_weight_stats():
 if __name__ == '__main__':
     try:
         last_perf = (0.0, 0.0)
-        init = False
+        init = True
         new_test_data = False
         test = False
         save = False
