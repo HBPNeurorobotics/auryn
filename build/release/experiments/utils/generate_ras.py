@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 
 def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='', randomize=False, pause_duration=0,
-                          event_polarity='on', cache=False, max_neuron_id=32 * 32):
+                          event_polarity='on', cache=False, max_neuron_id=32 * 32, delay=0.0):
     filename = "input"
     os.system('rm inputs/{}/{}/{}.ras'.format(exp_directory, test_or_train, filename))
 
@@ -37,8 +37,8 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
 
     print('\nloading {} data:'.format(test_or_train))
     with pd.HDFStore(
-            'data/{exp_dir}/{test_or_train}_{event_pol}.h5'.format(exp_dir=exp_directory, test_or_train=test_or_train,
-                                                                   event_pol=event_polarity)) as store:
+            'data/{exp_dir}/{test_or_train}_{event_pol}_{delay}.h5'.format(exp_dir=exp_directory, test_or_train=test_or_train,
+                                                                   event_pol=event_polarity, delay=delay)) as store:
         for i, sample_id in enumerate(tqdm(sample_ids)):
             key = 'm{mod}/s{sample_id}'.format(sample_id=sample_id,
                                                mod=sample_id % 10)
@@ -54,9 +54,17 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
                 elif event_polarity == 'off':
                     df = df[df.pol == 0]
                 elif event_polarity == 'dual':
-                    df.loc[df.pol == 1, 'n_id'] += int(max_neuron_id / 2)
+                    if delay != 0.0:
+                        frac = 4
+                    else:
+                        frac = 2
+                    df.loc[df.pol == 1, 'n_id'] += int(max_neuron_id / frac)
                 df = df.drop('pol', axis=1)
-
+                if delay != 0.0:
+                    df_copy = df.copy(deep=True)
+                    df_copy.loc[:, 'n_id'] += int(max_neuron_id / 2)
+                    df_copy.loc[:, 'ts'] += delay
+                    df = df.append(df_copy)
                 df2 = get_label_spikes_df(labels[i], max_neuron_id, timestamps[-1], 2500)
                 df_concat = df.append(df2)
                 df_concat.sort_values(by=['ts'], inplace=True)
