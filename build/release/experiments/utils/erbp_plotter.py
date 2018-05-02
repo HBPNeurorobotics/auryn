@@ -230,20 +230,63 @@ def plot_weight_histogram(path, nh1, connections=['vh', 'hh', 'ho'], save=False)
     plt.close('all')
 
 
-def plot_confusion_matrix(confusion_matrix, title='Confusion matrix', save=False):
-    cmap = plt.cm.viridis
-    plt.matshow(confusion_matrix, cmap=cmap)  # imshow
-    plt.title(title)
+def plot_confusion_matrix(df_confusion, save=False):
+    plt.imshow(df_confusion, cmap=plt.cm.viridis)
     plt.colorbar()
-    matrix_len = confusion_matrix.shape[0]
-    tick_marks = np.arange(matrix_len)
-    plt.xticks(tick_marks, tick_marks+1, verticalalignment='bottom')
-    plt.yticks(tick_marks, tick_marks+1)
-    # plt.tight_layout()
-        plt.ylabel('Actual label')
-    plt.xlabel('Predicted label')
+    tick_marks = np.arange(len(df_confusion.columns))
+
+    plt.xticks(tick_marks, df_confusion.columns)
+    plt.yticks(tick_marks, df_confusion.index)
+    plt.tight_layout()
+    plt.ylabel(df_confusion.index.name)
+    plt.xlabel(df_confusion.columns.name)
+    plt.gca().xaxis.set_label_position('top')
+    plt.gca().xaxis.set_ticks_position('top')
     if save:
-        plt.savefig('plots/confusion_matrix_{}.png'.format(time.time()), dpi=700)
+        plt.savefig('plots/confusion_matrix_{}.png'.format(time.time()), dpi=700, bbox_inches='tight')
     else:
         plt.show()
     plt.close('all')
+
+
+def plot_weight_convolution(path, nh1, nc, connections=['vh', 'hh', 'ho'], save=False):
+    weight_matrices = {}
+    for connection in connections:
+        weight_matrix = mtx_file_to_matrix("{path}/fwmat_{connection}.mtx".format(path=path, connection=connection))
+        if connection == 'vh':
+            weight_matrix = weight_matrix[:32 * 32]
+        elif connection == 'hh':
+            weight_matrix = weight_matrix[:, nh1:]
+        elif connection == 'ho':
+            weight_matrix = weight_matrix[nh1:]
+        weight_matrices[connection] = weight_matrix
+    conv_matrix = calc_conv(connections, weight_matrices)  # .reshape(32,32,12)
+    # conv_matrix = np.array(map(lambda x: np.argmax(x), conv_matrix)).reshape(32,32)
+    for i in range(nc):
+        plt.clf()
+        conv_label = np.array([item[i] for item in conv_matrix]).reshape(32, 32)
+
+        fig, ax = plt.subplots()
+        ax.set_title('Weight convolution for label {}'.format(i))
+        cbar_tick_size = 5000
+        conv_plot = ax.imshow(conv_label, cmap='PiYG', interpolation='nearest', vmin=-cbar_tick_size,
+                              vmax=cbar_tick_size)
+        cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
+        cbar.ax.set_yticklabels(['< -{}'.format(cbar_tick_size), '0', '> {}'.format(cbar_tick_size)])
+        if save:
+            plt.savefig('plots/convolution/weight_conv_{}.png'.format(time.time()), dpi=700)
+        else:
+            plt.show()
+        plt.close('all')
+
+
+def calc_conv(connections, weight_matrices):
+    weight_matrix = weight_matrices[connections[0]]
+    if len(connections) == 1:
+        return weight_matrix
+    else:
+        connections = connections[1:]
+        conv_vec = []
+        for n_id in range(weight_matrix.shape[0]):
+            conv_vec.append(sum(map(lambda x: x[0]*x[1], zip(weight_matrix[n_id], calc_conv(connections, weight_matrices)))))
+        return conv_vec
