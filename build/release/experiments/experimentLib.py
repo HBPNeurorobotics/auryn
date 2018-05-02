@@ -974,15 +974,13 @@ def process_test_rbp(context):
     return np.argmax(fr, axis=0)
 
 
-def get_confusion_matrix(pred_labels, actual_labels, normalized=False, margins=False):
+def get_confusion_df(pred_labels, actual_labels, normalized=False, margins=False):
     y_actu = pd.Series(actual_labels, name='Actual')
     y_pred = pd.Series(pred_labels, name='Predicted')
-    df_confusion = pd.crosstab(y_actu, y_pred, margins=margins)
+    df_confusion = pd.crosstab(y_actu, y_pred, margins=margins).transpose()
     if normalized:
-        confusion_matrix = df_confusion.astype('float').values / df_confusion.sum(axis=1)[:, None]
-    else:
-        confusion_matrix = df_confusion.as_matrix()
-    return confusion_matrix
+        df_confusion = df_confusion / df_confusion.sum(axis=0)
+    return df_confusion
 
 
 def process_test_classification(context, sample_duration_test, actual_labels):
@@ -997,8 +995,8 @@ def process_test_classification(context, sample_duration_test, actual_labels):
     rate_class = classification(pred_rate_labels, actual_labels)
     first_class = classification(pred_first_labels, actual_labels)
 
-    rate_confusion_data_frame = get_confusion_matrix(pred_rate_labels, actual_labels, normalized=True)
-    first_confusion_data_frame = get_confusion_matrix(pred_first_labels, actual_labels, normalized=True)
+    rate_confusion_data_frame = get_confusion_df(pred_rate_labels, actual_labels, normalized=True)
+    first_confusion_data_frame = get_confusion_df(pred_first_labels, actual_labels, normalized=True)
 
     print('rate_classification: {}'.format(rate_class))
     print('first_classification: {}'.format(first_class))
