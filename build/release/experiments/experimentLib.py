@@ -992,15 +992,30 @@ def process_test_classification(context, sample_duration_test, actual_labels):
     pred_rate_labels = get_rate_prediction(split_raw)
     pred_first_labels = get_first_prediction(split_raw)
 
-    rate_class = classification(pred_rate_labels, actual_labels)
-    first_class = classification(pred_first_labels, actual_labels)
+    rate_class = classify(pred_rate_labels, actual_labels)
+    first_class = classify(pred_first_labels, actual_labels)
 
     rate_confusion_data_frame = get_confusion_df(pred_rate_labels, actual_labels, normalized=True)
     first_confusion_data_frame = get_confusion_df(pred_first_labels, actual_labels, normalized=True)
 
+    ouput_spikes_per_label = get_output_spikes_per_label(split_raw, actual_labels)
+    ouput_spikes_per_label_norm = get_output_spikes_per_label(split_raw, actual_labels, normalized=True)
+
     print('rate_classification: {}'.format(rate_class))
     print('first_classification: {}'.format(first_class))
-    return rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame
+    return rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, ouput_spikes_per_label, ouput_spikes_per_label_norm
+
+
+def get_output_spikes_per_label(split_raw, actual_labels, normalized=False):
+    label_bins = np.zeros((11, 11))
+    for i, elem in enumerate(split_raw):
+        label_bins[actual_labels[i]-1] += np.bincount(elem[:, 0].astype(int), minlength=12)[1:]
+    actual_label_bins = np.bincount(actual_labels)[1:]
+    for i, bin in enumerate(actual_label_bins):
+        label_bins[i] /= bin
+    if normalized:
+        label_bins = map(lambda x: x / np.sum(x), label_bins)
+    return np.array(label_bins).T
 
 
 def get_rate_prediction(split_raw):
@@ -1022,7 +1037,7 @@ def get_first_prediction(split_raw):
     return prediction_labels
 
 
-def classification(pred_labels, labels_test):
+def classify(pred_labels, labels_test):
     return float(len(filter(lambda x: x[0] == x[1], zip(pred_labels, labels_test)))) / len(labels_test)
 
 

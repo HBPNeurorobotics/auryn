@@ -47,10 +47,12 @@ def run_classify(context, labels_test, sample_duration_test):
                             layers=['out'], res=context['nv'] - context['nc'], number_of_classes=context['nc'],
                             save=True)
     # first 5 labels: 7,2,1,0,4
-    rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame = elib.process_test_classification(
+    rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, ouput_spikes_per_label, ouput_spikes_per_label_norm = elib.process_test_classification(
         context, sample_duration_test, labels_test)
+    plotter.plot_output_spike_count(ouput_spikes_per_label, 'Output spike count per label', save=True, image_title='out_spk')
+    plotter.plot_output_spike_count(ouput_spikes_per_label_norm, 'Normalized ouput spike count per label', save=True, image_title='out_spk_norm')
     plotter.plot_confusion_matrix(rate_confusion_data_frame, save=True)
-    plotter.plot_confusion_matrix(first_confusion_data_frame, save=True)
+    #plotter.plot_confusion_matrix(first_confusion_data_frame, save=True)
     return rate_class, first_class
 
 
@@ -93,7 +95,7 @@ context = {'ncores': 4,
            'nh2': 200,
            'nh1': 200,
            'nc': 12,
-           'eta': 0.00020920706406,
+           'eta': 6.0e-6,
            'eta_decay': 0.9,
            'ncpl': 1,
            'gate_low': -.6,
@@ -117,9 +119,9 @@ context = {'ncores': 4,
            'sigma': 0e-3,
            'max_samples_train': 1176,  # useless
            'max_samples_test': 288,  # useless
-           'n_samples_train': 1176,  # 1176
+           'n_samples_train': 1,  # 1176
            'n_samples_test': 288,  # 288
-           'n_epochs': 20,  # 10
+           'n_epochs': 1,  # 10
            'n_loop': 1,
            'prob_syn': 0.65,
            'init_mean_bias_v': -.1,
@@ -155,7 +157,7 @@ if __name__ == '__main__':
         init = False
         new_test_data = True
         test = False
-        save = True
+        save = False
 
         max_samples_train = context['max_samples_train']
         max_samples_test = context['max_samples_test']

@@ -117,13 +117,15 @@ def plot_weight_matrix(path, connections=['vh', 'hh', 'ho'], save=False):
 
 
 def plot_ras_spikes(pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
-                    save=False):
+                    save=False, att_window=False, att_win_input_size=128 * 2):
     title = 'Spike times'
     plt.title(title)
     counter = 1
     num_plots = len(layers)
     if 'vis' in layers:
         num_plots += 1
+        if att_window:
+            num_plots += 1
 
     for layer in layers:
         path = pathinput.format(layer)
@@ -140,6 +142,15 @@ def plot_ras_spikes(pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys
             plt.plot(label_df.ts.values, label_df.n_id.values - res, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
                      markersize=1, alpha=0.1)
             plt.ylabel("Label")
+            if att_window == True:
+                counter += 1
+                data_neuron_size = res - att_win_input_size
+                att_pos_df = data_df.loc[data_df.n_id >= data_neuron_size]
+                data_df = data_df.loc[data_df.n_id < data_neuron_size]
+                plt.subplot(num_plots, 1, counter, sharex=ax1)
+                plt.plot(att_pos_df.ts.values, att_pos_df.n_id.values, linestyle='None', marker=u',',
+                         color=[0, 0, 1, 1])
+                plt.ylabel("Attention")
             counter += 1
             plt.subplot(num_plots, 1, counter, sharex=ax1)
             plt.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u',', color=[0, 0, 1, 1])
@@ -288,5 +299,40 @@ def calc_conv(connections, weight_matrices):
         connections = connections[1:]
         conv_vec = []
         for n_id in range(weight_matrix.shape[0]):
-            conv_vec.append(sum(map(lambda x: x[0]*x[1], zip(weight_matrix[n_id], calc_conv(connections, weight_matrices)))))
+            conv_vec.append(
+                sum(map(lambda x: x[0] * x[1], zip(weight_matrix[n_id], calc_conv(connections, weight_matrices)))))
         return conv_vec
+
+
+def plot_output_spike_count(output_spikes_per_label, plot_title, save=False, image_title=''):
+    plt.clf()
+    fig, ax = plt.subplots()
+    cax = ax.imshow(output_spikes_per_label, cmap='viridis', interpolation='nearest', extent=[0.5, 11.5, 11.5, 0.5])
+    ax.set_title(plot_title)
+    ax.set_xticks(range(1, 12))
+    ax.set_yticks(range(1, 12))
+    cbar = fig.colorbar(cax)
+    if save:
+        plt.savefig('plots/{}_{}.png'.format(image_title, time.time()), dpi=700)
+    else:
+        plt.show()
+    plt.close('all')
+
+
+def plot_attention_window_on_hist(df, win_x, win_y, save=False):
+    bucket = np.zeros((128, 128), dtype=int)
+    for event in df.itertuples():
+        bucket[event.y][event.x] += 1
+    plt.clf()
+    fig, ax = plt.subplots()
+    rect_bucket = np.zeros((128, 128), dtype=int)
+    rect_bucket[win_y:win_y + 32, win_x:win_x + 32] = 10
+    bucket += rect_bucket
+    cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest')
+    ax.set_title('Attention window')
+    cbar = fig.colorbar(cax)
+    if save:
+        plt.savefig('plots/attention_window/att_win_{}.png'.format(time.time()), dpi=700)
+    else:
+        plt.show()
+    plt.close('all')
