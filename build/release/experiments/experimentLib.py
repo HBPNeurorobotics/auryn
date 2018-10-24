@@ -428,8 +428,10 @@ def init_rbp2h_parameters(nv, nc, nh1, nh2, mean_weight=0., std_weight=0.2, seed
     Whh[:nh1, nh1:nh1 + nh2] = np.random.uniform(low=-ahh1, high=+ahh1, size=(nh1, nh2))
     CWhh[:nh1, nh1:nh1 + nh2] = True
     if recurrent:
-        Whh[nh1:nh1 + nh2, :nh1] = np.random.uniform(low=-ahh1, high=+ahh1, size=(nh1, nh2))
-        CWhh[nh1:nh1 + nh2, :nh1] = True
+        part = 5
+        Whh[nh1:nh1 + int(nh2 / part), :int(nh1 / part)] = np.random.uniform(low=-ahh1, high=+ahh1,
+                                                                             size=(int(nh1 / part), int(nh2 / part)))
+        CWhh[nh1:nh1 + int(nh2 / part), :int(nh1 / part)] = True
 
     Wvh = np.random.uniform(low=-avh, high=+avh, size=(nv, nh1))
     Wvh[(nv - nc):, :] = 0
@@ -975,7 +977,7 @@ def process_test_rbp(context):
 
 
 def get_confusion_df(pred_labels, actual_labels, normalized=False, margins=False):
-    y_actu = pd.Series(actual_labels, name='Actual')
+    y_actu = pd.Series(actual_labels, name='Actual label')
     y_pred = pd.Series(pred_labels, name='Predicted')
     df_confusion = pd.crosstab(y_actu, y_pred, margins=margins).transpose()
     if normalized:
@@ -998,24 +1000,70 @@ def process_test_classification(context, sample_duration_test, actual_labels):
     rate_confusion_data_frame = get_confusion_df(pred_rate_labels, actual_labels, normalized=True)
     first_confusion_data_frame = get_confusion_df(pred_first_labels, actual_labels, normalized=True)
 
-    ouput_spikes_per_label = get_output_spikes_per_label(split_raw, actual_labels)
-    ouput_spikes_per_label_norm = get_output_spikes_per_label(split_raw, actual_labels, normalized=True)
+    if context['directory'] == 'dvs_gesture_split':
+        label_start = True
+    else:
+        label_start = False
+    output_spikes_per_label = get_output_spikes_per_label(split_raw, actual_labels, context['nc'], label_start)
+    ouput_spikes_per_label_norm = get_output_spikes_per_label(split_raw, actual_labels, context['nc'], label_start,
+                                                              normalized=True)
+
+    total_snr = calc_total_snr(split_raw, label_start, actual_labels, context['nc'])
+    snr_per_label = calc_snr_per_label(output_spikes_per_label.T)
 
     print('rate_classification: {}'.format(rate_class))
     print('first_classification: {}'.format(first_class))
-    return rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, ouput_spikes_per_label, ouput_spikes_per_label_norm
+    return rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, output_spikes_per_label, ouput_spikes_per_label_norm, total_snr, snr_per_label
 
 
-def get_output_spikes_per_label(split_raw, actual_labels, normalized=False):
-    label_bins = np.zeros((11, 11))
+def get_output_spikes_per_label(split_raw, actual_labels, nc, start_from_one, normalized=False):
+    s_z = 0
+    if start_from_one:
+        s_z = 1
+    label_bins = np.zeros((nc - s_z, nc - s_z))
     for i, elem in enumerate(split_raw):
-        label_bins[actual_labels[i]-1] += np.bincount(elem[:, 0].astype(int), minlength=12)[1:]
-    actual_label_bins = np.bincount(actual_labels)[1:]
+        label_bins[actual_labels[i] - s_z] += np.bincount(elem[:, 0].astype(int), minlength=nc)[s_z:]
+    actual_label_bins = np.bincount(actual_labels)[s_z:]
     for i, bin in enumerate(actual_label_bins):
         label_bins[i] /= bin
     if normalized:
         label_bins = map(lambda x: x / np.sum(x), label_bins)
     return np.array(label_bins).T
+
+
+def calc_total_snr(split_raw, start_from_one, actual_labels, nc):
+    overall_wrong_spikes = 0
+    overall_correct_spikes = 0
+    s_z = 0
+    if start_from_one:
+        s_z = 1
+    for i, elem in enumerate(split_raw):
+        label_bins = np.bincount(elem[:, 0].astype(int), minlength=nc)[s_z:]
+        overall_wrong_spikes += np.sum(label_bins[:actual_labels[i] - s_z]) + np.sum(label_bins[actual_labels[i] + 1 - s_z:])
+        overall_correct_spikes += label_bins[actual_labels[i] - s_z]
+    if overall_correct_spikes == 0:
+        total_snr = 0.
+    elif overall_wrong_spikes == 0:
+        total_snr = np.inf
+    else:
+        total_snr = float(overall_correct_spikes) / overall_wrong_spikes
+    return total_snr
+
+
+def calc_snr_per_label(output_spikes):
+    snr_per_label = []
+    for i, label in enumerate(output_spikes):
+        sum_of_wrong_spikes = np.sum(label[:i]) + np.sum(label[i + 1:])
+        number_of_correct_spikes = label[i]
+        if sum_of_wrong_spikes > 0:
+            snr = number_of_correct_spikes / sum_of_wrong_spikes
+        else:
+            if number_of_correct_spikes > 0:
+                snr = np.inf
+            else:
+                snr = 0.
+        snr_per_label.append(snr)
+    return snr_per_label
 
 
 def get_rate_prediction(split_raw):

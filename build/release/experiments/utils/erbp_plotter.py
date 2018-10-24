@@ -60,8 +60,16 @@ def plot_2d_hist_from_aedat31(pathname, start=0, end=sys.maxint, image_title='')
                   dynamic_v=True)
 
 
-def plot_2d_events_from_aedat31(path, start=0, end=sys.maxint, image_title=''):
-    timestamps, xaddr, yaddr, pol = jhandler.load_aedat31(path, debug=0)
+def plot_2d_events_from_aedat(path, start=0, end=sys.maxint, image_title='', version='aedat3'):
+    if version == 'aedat3':
+        timestamps, xaddr, yaddr, pol = jhandler.load_aedat31(path, debug=0)
+    else:
+        timestamps, xaddr, yaddr, pol = jhandler.load_jaer(path, version='aedat', debug=0)
+        timestamps = np.array(timestamps)
+        if timestamps[0] > timestamps[-1]:
+            print('HAD TO RESTORE TS ORDER')
+            timestamps = restore_ts_order(timestamps)
+        timestamps -= min(timestamps)
     df = pd.DataFrame({'ts': timestamps, 'x': xaddr, 'y': yaddr, 'p': pol})
     df.ts = df.ts * 1e-6
     if end > max(df.ts):
@@ -79,6 +87,13 @@ def plot_2d_events_from_aedat31(path, start=0, end=sys.maxint, image_title=''):
                   show_cbar=False, vmin=-1, vmax=1)
 
 
+def restore_ts_order(timestamps):
+    for i in range(len(timestamps) - 1):
+        if timestamps[i] > timestamps[i + 1]:
+            timestamps[:i + 1] -= (2 ** 32 * 1e-6)
+            return timestamps
+
+
 def plot_heat_map(bucket, plot_title, save=False, image_title='', show_cbar=True, vmin=0, vmax=10, dynamic_v=False):
     plt.clf()
     fig, ax = plt.subplots()
@@ -86,7 +101,7 @@ def plot_heat_map(bucket, plot_title, save=False, image_title='', show_cbar=True
         cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest')
     else:
         cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', vmin=vmin, vmax=vmax)
-    ax.set_title(plot_title)
+    #ax.set_title(plot_title)
     if show_cbar:
         cbar = fig.colorbar(cax)
     else:
@@ -94,7 +109,7 @@ def plot_heat_map(bucket, plot_title, save=False, image_title='', show_cbar=True
                         Line2D([0], [0], color=plt.cm.viridis(-1.), lw=0, marker='s')]
         plt.legend(custom_lines, ['ON', 'OFF'], handlelength=0.5, borderpad=0.5, framealpha=0.5)
     if save:
-        plt.savefig('{}.png'.format(image_title), dpi=700)
+        plt.savefig('{}.png'.format(image_title), dpi=300, bbox_inches='tight')
     else:
         plt.show()
     plt.close('all')
@@ -110,30 +125,28 @@ def plot_weight_matrix(path, connections=['vh', 'hh', 'ho'], save=False):
         cbar = plt.colorbar(cax)
     plt.tight_layout()
     if save:
-        plt.savefig('plots/weight_matrix_{}_{}.png'.format(connections, time.time()), dpi=700)
+        plt.savefig('plots/weight_matrix_{}_{}.png'.format(connections, time.time()), dpi=300)
     else:
         plt.show()
     plt.close('all')
 
 
 def plot_ras_spikes(pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
-                    save=False, att_window=False, att_win_input_size=128 * 2):
+                    save=False, input_att_window=False, att_win_input_size=128 * 2):
     title = 'Spike times'
     plt.title(title)
     counter = 1
     num_plots = len(layers)
     if 'vis' in layers:
         num_plots += 1
-        if att_window:
+        if input_att_window:
             num_plots += 1
 
     for layer in layers:
         path = pathinput.format(layer)
         data_df, seek = fio.ras_to_df(path, start, end)
-        if counter == 1:
-            ax1 = plt.subplot(num_plots, 1, counter)
-        else:
-            ax1 = plt.subplot(num_plots, 1, counter, sharex=ax1)
+        ax1 = plt.subplot(num_plots, 1, counter)
+        ax1.get_yaxis().set_label_coords(-0.1, 0.5)
         if layer == 'vis':
             label_df = data_df.loc[data_df.n_id >= res]
             data_df = data_df.loc[data_df.n_id < res]
@@ -142,32 +155,51 @@ def plot_ras_spikes(pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys
             plt.plot(label_df.ts.values, label_df.n_id.values - res, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
                      markersize=1, alpha=0.1)
             plt.ylabel("Label")
-            if att_window == True:
-                counter += 1
+            ax1.xaxis.set_major_locator(plt.NullLocator())
+            counter += 1
+            x1, x2, y1, y2 = plt.axis()
+            plt.axis((start, end, y1, y2))
+            if input_att_window:
                 data_neuron_size = res - att_win_input_size
                 att_pos_df = data_df.loc[data_df.n_id >= data_neuron_size]
                 data_df = data_df.loc[data_df.n_id < data_neuron_size]
-                plt.subplot(num_plots, 1, counter, sharex=ax1)
+                ax1 = plt.subplot(num_plots, 1, counter, sharex=ax1)
+                ax1.get_yaxis().set_label_coords(-0.1, 0.5)
                 plt.plot(att_pos_df.ts.values, att_pos_df.n_id.values, linestyle='None', marker=u',',
                          color=[0, 0, 1, 1])
                 plt.ylabel("Attention")
-            counter += 1
-            plt.subplot(num_plots, 1, counter, sharex=ax1)
+                ax1.xaxis.set_major_locator(plt.NullLocator())
+                counter += 1
+                x1, x2, y1, y2 = plt.axis()
+                plt.axis((start, end, y1, y2))
+            ax1 = plt.subplot(num_plots, 1, counter)
+            ax1.get_yaxis().set_label_coords(-0.1, 0.5)
             plt.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u',', color=[0, 0, 1, 1])
             plt.ylabel("Input")
+            ax1.xaxis.set_major_locator(plt.NullLocator())
         elif layer == 'hid':
             plt.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u',', color=[0, 0, 1, 1])
+            plt.plot((start, end), (200, 200), 'r--', linewidth=0.1, alpha=1)
             plt.ylabel("Hidden")
+            ax1.xaxis.set_major_locator(plt.NullLocator())
         elif layer == 'out':
             for i in xrange(number_of_classes):
                 plt.plot((start, end), (i, i), 'r--', linewidth=0.1, alpha=1)
             plt.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                     markersize=1, alpha=0.1)
+                     markersize=1, alpha=0.2)
             plt.ylabel("Output")
-
+        elif layer == 'err1':
+            for i in xrange(number_of_classes):
+                plt.plot((start, end), (i, i), 'r--', linewidth=0.1, alpha=1)
+            plt.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
+                     markersize=1, alpha=0.2)
+            path = pathinput.format(layer.replace('1', '2'))
+            data_df, seek = ras_to_df(path, start, end)
+            plt.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[1, 0, 0, 1],
+                     markersize=1, alpha=0.2)
+            plt.ylabel("Error")
         print(data_df.ts.values.size)
         counter += 1
-
         x1, x2, y1, y2 = plt.axis()
         plt.axis((start, end, y1, y2))
 
@@ -175,7 +207,7 @@ def plot_ras_spikes(pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys
     plt.tight_layout()
 
     if save:
-        plt.savefig('plots/{}_{}_{}_{}.png'.format(start, end, layers, time.time()), dpi=700)
+        plt.savefig('plots/{}_{}_{}_{}.png'.format(start, end, layers, time.time()), dpi=300)
     else:
         plt.show()
     plt.close('all')
@@ -198,24 +230,34 @@ def plot_weight_stats(stats, save=False):
     plt.xlabel('epoch')
     plt.tight_layout()
     if save:
-        plt.savefig('plots/weight_stats_{}.png'.format(time.time()), dpi=700)
+        plt.savefig('plots/weight_stats_{}.png'.format(time.time()), dpi=300)
+    else:
+        plt.show()
+    plt.close('all')
+
+
+def plot_output_weights_over_time(output_weights, save=False):
+    plt.clf()
+    plt.plot(output_weights, alpha=0.1)
+    if save:
+        plt.savefig('plots/output_weights_{}.png'.format(time.time()), dpi=300)
     else:
         plt.show()
     plt.close('all')
 
 
 def plot_accuracy_rate_first(acc_hist, save=False):
-    x = [i[0] for i in acc_hist]
+    #x = [i[0] for i in acc_hist]
     y_rate = [i[1][0] for i in acc_hist]
     y_first = [i[1][1] for i in acc_hist]
-    plt.plot(x, y_rate, marker='o')
-    plt.plot(x, y_first, marker='o', color='r')
-    plt.title('classification accuracy')
+    plt.plot(y_rate, marker='o')
+    plt.plot(y_first, marker='o', color='r')
+    #plt.title('classification accuracy')
     plt.xlabel('epoch')
     plt.ylabel('accuracy in percent')
     plt.legend(['rate', 'first'])
     if save:
-        plt.savefig('plots/acc_hist_{}.png'.format(time.time()), dpi=700)
+        plt.savefig('plots/acc_hist_{}.png'.format(time.time()), dpi=300, bbox_inches='tight')
     else:
         plt.show()
     plt.close('all')
@@ -235,14 +277,14 @@ def plot_weight_histogram(path, nh1, connections=['vh', 'hh', 'ho'], save=False)
         cax = plt.hist(weight_matrix, 300)
     plt.tight_layout()
     if save:
-        plt.savefig('plots/weight_histogram_{}_{}.png'.format(connections, time.time()), dpi=700)
+        plt.savefig('plots/weight_histogram_{}_{}.png'.format(connections, time.time()), dpi=300)
     else:
         plt.show()
     plt.close('all')
 
 
 def plot_confusion_matrix(df_confusion, save=False):
-    plt.imshow(df_confusion, cmap=plt.cm.viridis)
+    plt.imshow(df_confusion, cmap=plt.cm.viridis, vmax=1.0)
     plt.colorbar()
     tick_marks = np.arange(len(df_confusion.columns))
 
@@ -254,7 +296,7 @@ def plot_confusion_matrix(df_confusion, save=False):
     plt.gca().xaxis.set_label_position('top')
     plt.gca().xaxis.set_ticks_position('top')
     if save:
-        plt.savefig('plots/confusion_matrix_{}.png'.format(time.time()), dpi=700, bbox_inches='tight')
+        plt.savefig('plots/confusion_matrix_{}.png'.format(time.time()), dpi=300, bbox_inches='tight')
     else:
         plt.show()
     plt.close('all')
@@ -285,7 +327,7 @@ def plot_weight_convolution(path, nh1, nc, connections=['vh', 'hh', 'ho'], save=
         cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
         cbar.ax.set_yticklabels(['< -{}'.format(cbar_tick_size), '0', '> {}'.format(cbar_tick_size)])
         if save:
-            plt.savefig('plots/convolution/weight_conv_{}.png'.format(time.time()), dpi=700)
+            plt.savefig('plots/convolution/weight_conv_{}.png'.format(time.time()), dpi=300)
         else:
             plt.show()
         plt.close('all')
@@ -304,35 +346,46 @@ def calc_conv(connections, weight_matrices):
         return conv_vec
 
 
-def plot_output_spike_count(output_spikes_per_label, plot_title, save=False, image_title=''):
+def plot_output_spike_count(output_spikes_per_label, plot_title, start_from, save=False, image_title=''):
     plt.clf()
     fig, ax = plt.subplots()
-    cax = ax.imshow(output_spikes_per_label, cmap='viridis', interpolation='nearest', extent=[0.5, 11.5, 11.5, 0.5])
-    ax.set_title(plot_title)
-    ax.set_xticks(range(1, 12))
-    ax.set_yticks(range(1, 12))
+    size = output_spikes_per_label.shape[0]
+    cax = ax.imshow(output_spikes_per_label, cmap='viridis', interpolation='nearest',
+                    extent=[-0.5 + start_from, size - 0.5 + start_from, size - 0.5 + start_from, -0.5 + start_from], vmin=0)
+    # ax.set_title(plot_title, y=1.08)
+    ax.xaxis.tick_top()
+    ax.set_xticks(range(start_from, size + start_from))
+    ax.set_yticks(range(start_from, size + start_from))
+    ax.xaxis.set_label_position('top')
+    ax.set_xlabel('Actual label')
+    ax.set_ylabel('Output neuron id')
     cbar = fig.colorbar(cax)
     if save:
-        plt.savefig('plots/{}_{}.png'.format(image_title, time.time()), dpi=700)
+        plt.savefig('plots/{}_{}.png'.format(image_title, time.time()), dpi=300, bbox_inches='tight')
     else:
         plt.show()
     plt.close('all')
 
 
-def plot_attention_window_on_hist(df, win_x, win_y, save=False):
+def plot_attention_window_on_hist(df, win_x, win_y, attention_window_size, number, save=False):
     bucket = np.zeros((128, 128), dtype=int)
     for event in df.itertuples():
         bucket[event.y][event.x] += 1
     plt.clf()
     fig, ax = plt.subplots()
-    rect_bucket = np.zeros((128, 128), dtype=int)
-    rect_bucket[win_y:win_y + 32, win_x:win_x + 32] = 10
-    bucket += rect_bucket
-    cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest')
+    rect_bucket = np.ones((128, 128), dtype=int)
+    rect_bucket[np.clip(win_y, 0, 128):np.clip(win_y + attention_window_size, 0, 128),
+    np.clip(win_x, 0, 128):np.clip(win_x + attention_window_size, 0, 128)] = 0
+    rect_bucket[np.clip(win_y + 1, 0, 128):np.clip(win_y + attention_window_size - 1, 0, 128),
+    np.clip(win_x + 1, 0, 128):np.clip(win_x + attention_window_size - 1, 0, 128)] = 1
+    bucket *= rect_bucket
+    rect_bucket -= 1
+    bucket -= 10 * rect_bucket
+    cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', vmin=0, vmax=10)
     ax.set_title('Attention window')
-    cbar = fig.colorbar(cax)
+    # cbar = fig.colorbar(cax)
     if save:
-        plt.savefig('plots/attention_window/att_win_{}.png'.format(time.time()), dpi=700)
+        plt.savefig('plots/attention_window/att_win_{:05d}.png'.format(number), dpi=300)
     else:
         plt.show()
     plt.close('all')
