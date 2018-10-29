@@ -1,5 +1,3 @@
-![Auryn logo](http://www.fzenke.net/uploads/images/logo_trans_small.png "Auryn logo")
-
 Auryn 
 =====
 
@@ -20,20 +18,47 @@ support installed. To download and compile the examples under Ubuntu Linux try:
 
 ```
 sudo apt-get install cmake git build-essential libboost-all-dev
-git clone https://ids-git.fzi.de/friedric/erbp.git && cd auryn/build/release
-./bootstrap.sh && make
+git clone https://ids-git.fzi.de/friedric/erbp.git
+cd auryn/build/release
+./bootstrap.sh
+make
 ```
 
 Run eRBP
 --------
 
+Download Data Sets:
+
+- MNIST-DVS: http://www2.imse-cnm.csic.es/caviar/MNISTDVS.html
+    - copy into folder build/release/experiments/data/dvs_mnist_saccade
 ```
 cd build/release/experiments/
-python2 run_classification_mnist_deep_dual.py
+python2 run_classification_mnist_saccade.py
+```
+- MNIST-FLASH-DVS: http://www2.imse-cnm.csic.es/caviar/MNISTDVS.html
+    - copy into folder build/release/experiments/data/dvs_mnist_flash
+```
+cd build/release/experiments/
+python2 run_classification_mnist_flash.py
+```
+- IBM DVS Gesture: http://www.research.ibm.com/dvsgesture/
+    - copy into folder build/release/experiments/data/dvs_gesture
+    - run build/release/experiments/utils/gesture_ds_converter.py
+```
+cd build/release/experiments/
+python2 run_classification_gesture_dual_vis_attention.py
 ```
 
-This will train a two-layer feed-forward spiking neural network (all to all connections) on MNIST digits as described in <https://arxiv.org/abs/1612.05596>.
+Most important files
+--------
+- **Read aedat files**: build/release/experiments/utils/jaer_data_handler.py
+- **Generate ras**: build/release/experiments/utils/generate_ras.py
+- **Run experiment**: build/release/experiments/run_classification_*.py
+- **Evaluate experiment**: build/release/experiments/experimentLib.py
+- **Plotting**: build/release/experiments/utils/erbp_plotter.py
 
+
+- **Experiment network**: experiments/exp_rbp_flash.cpp
 
 License & Copyright (eRBP) 
 ---------------------------
