@@ -20,7 +20,7 @@ import pickle
 #    import dill as pickle
 #except ImportError:
 #    warnings.warn('Cannot import dill, falling back to pickle. Several pyNCS objects cannot be pickled')
-#    import pickle 
+#    import pickle
 
 import numpy as np
 from shutil import rmtree
@@ -84,7 +84,7 @@ def loadPlotParameters(size=0.5, fontsize=18.0):
           'text.usetex': True,
           'figure.figsize': get_figsize(1000 * size, ratio=1.3)}  # size in inches
     pylab.rcParams.update(params0)
-    
+
 def load_compatibility(filename):
     """
     Same as experimentTools.load(), but works around recent module renaming problems
@@ -98,38 +98,38 @@ def load_compatibility(filename):
         'pyST.STsl': 'pyNCS.pyST.STsl',
         'pyST.stgen': 'pyNCS.pyST.stgen',
         }
-    
+
     def mapname(name):
         if name in renametable:
             return renametable[name]
         return name
-    
+
     def mapped_load_global(self):
         module = mapname(self.readline()[:-1])
         name = mapname(self.readline()[:-1])
         klass = self.find_class(module, name)
         self.append(klass)
-        
+
     def loads(filename_):
         fh = file(filename_,'rb')
         unpickler = pickle.Unpickler(fh)
         unpickler.dispatch[pickle.GLOBAL] = mapped_load_global
         return unpickler.load()
-    
+
     return loads(filename)
 
 def load(filename=None, compatibility=False):
     """
     Unpickles file named 'filename' from the results directory. If no 'filename' is given, then 'globaldata.pickle' is loaded
     """
-    if filename == None: 
+    if filename == None:
         filename = globaldata.directory + 'globaldata.pickle'
     else:
-        filename = globaldata.directory + filename        
+        filename = globaldata.directory + filename
     if compatibility:
         return load_compatibility(filename)
     else:
-        return pickle.load(file(filename, 'rb'))    
+        return pickle.load(file(filename, 'rb'))
 
 
 def save_source():
@@ -146,7 +146,7 @@ def save_source():
     for i in all_src:
         h.add(i)
     h.close()
-    
+
 def save_file(filename):
     """
     Save all the python scripts from the current directory into the results directory
@@ -250,7 +250,7 @@ def save_rec_files(nsetup):
     import shutil, os
     for f in exp_fns:
         shutil.copyfile(f, globaldata.directory+f.split('/')[-1])
-        
+
 def savefigs(filename='fig', extension = 'png', close=True, *args, **kwargs):
     """
     Saves all figures with filename *filename#* where # is the figure number.
@@ -259,7 +259,7 @@ def savefigs(filename='fig', extension = 'png', close=True, *args, **kwargs):
     *filename*: figure name prefix
     *extension*: figure extension. savefig should resolve the format from the extension
     *close*: whether to close the figure after it is saved
-    *args, **kwargs  are passed to savefig  
+    *args, **kwargs  are passed to savefig
     """
     import matplotlib,pylab
     figures = [manager.canvas.figure
