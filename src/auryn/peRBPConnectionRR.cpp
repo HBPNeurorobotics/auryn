@@ -128,7 +128,7 @@ AurynWeight peRBPConnectionRR::rr(AurynWeight weight){
   double p, abseps; 
   AurynWeight rrw;
 
-  s = -2*signbit(weight)+1;
+  s = -2*std::signbit(weight)+1;
   abseps = abs(weight)/wresol;
   p = abseps-floor(abseps);
   if (p>(*die)()){
