@@ -19,7 +19,7 @@ support installed. To download and compile the examples under Ubuntu Linux try:
 ```
 sudo apt-get install cmake git build-essential libboost-all-dev
 git clone https://ids-git.fzi.de/friedric/erbp.git
-cd auryn/build/release
+cd erbp/build/release
 ./bootstrap.sh
 make
 ```
