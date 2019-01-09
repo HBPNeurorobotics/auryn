@@ -1,4 +1,4 @@
-Auryn 
+Auryn
 =====
 
 Auryn is Simulator for recurrent spiking neural networks with synaptic
@@ -60,7 +60,7 @@ Most important files
 
 - **Experiment network**: experiments/exp_rbp_flash.cpp
 
-License & Copyright (eRBP) 
+License & Copyright (eRBP)
 ---------------------------
 
 Copyright 2016-2017 Emre Neftci
@@ -79,7 +79,7 @@ You should have received a copy of the GNU General Public License
 along with Auryn.  If not, see <http://www.gnu.org/licenses/>.
 
 
-License & Copyright (Auryn) 
+License & Copyright (Auryn)
 ---------------------------
 
 Copyright 2014-2017 Friedemann Zenke
