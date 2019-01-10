@@ -177,9 +177,10 @@ if __name__ == '__main__':
         test = True
         save = False
 
-        folder = '066__21-07-2018'
-        directory = 'Results/{}/'.format(folder)
-        # directory = None
+
+        # folder = '066__21-07-2018'
+        # directory = 'Results/{}/'.format(folder)
+        directory = None
         if directory is not None:
             print 'Loading previous run...'
             et.globaldata.directory = directory
