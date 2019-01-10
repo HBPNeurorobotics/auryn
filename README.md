@@ -19,9 +19,11 @@ support installed. To download and compile the examples under Ubuntu Linux try:
 ```
 sudo apt-get install cmake git build-essential libboost-all-dev
 git clone https://ids-git.fzi.de/friedric/erbp.git
-cd erbp/build/release
+cd erbp
+pip install -r requirements.txt
+cd build/release
 ./bootstrap.sh
-make
+make -j8
 ```
 
 Run eRBP
