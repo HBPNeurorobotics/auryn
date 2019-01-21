@@ -594,8 +594,7 @@ def save_auryn_wmat(filename, W, dimensions=None, mask=None):
     if mask is not None:
         M = np.array(filter(lambda x: mask[int(x[0]), int(x[1])], M))
 
-    mmwrite(filename, csr_matrix((M[:, 2], (M[:, 0], M[:, 1]))), symmetry='general')
-
+    mmwrite(filename, csr_matrix((M[:, 2], (M[:, 0].astype(int), M[:, 1].astype(int)))), symmetry='general')
 
 def save_all_fwmat(M, prefix):
     from scipy.io import mmwrite

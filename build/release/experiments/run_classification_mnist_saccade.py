@@ -172,10 +172,10 @@ def update_output_weights(output_weights):
 if __name__ == '__main__':
     try:
         last_perf = (0.0, 0.0)
-        init = False
-        new_test_data = True
-        test = True
-        save = False
+        init = True # initialize weights?
+        new_test_data = True # generate new test data ras files?
+        test = True # test before first training epoch?
+        save = False # save results to result folder?
 
 
         # folder = '066__21-07-2018'
