@@ -1,0 +1,27 @@
+topics :
+  - '/dvs_right/events'
+#  - '/dvs_left/events'
+dvs_res : 128
+
+use_attention_window : False
+# if attention_window == True
+att_win_size : 32
+use_online_median : True
+# if online_median == True
+online_median_event_amount : 1000
+# if online_median == False
+att_time_frame : 0.02
+# if attention_window == False
+down_sample_res : 32
+
+sample_pause_train : 0.4
+sample_pause_test : 0.4
+
+event_polarity : 'dual'
+
+max_samples_train : 160
+max_samples_test : 40
+n_samples_train : 160
+n_samples_test : 40
+
+label_freq : 500
