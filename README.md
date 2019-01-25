@@ -21,6 +21,7 @@ sudo apt-get install cmake git build-essential libboost-all-dev
 git clone https://ids-git.fzi.de/friedric/erbp.git
 cd erbp
 pip install -r requirements.txt
+pip install -e .
 cd build/release
 ./bootstrap.sh
 make -j8

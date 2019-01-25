@@ -5,10 +5,9 @@ import experimentTools as et
 import traceback
 import pdb
 import numpy as np
-import utils.erbp_plotter as plotter
+from erbp_utils.erbp_plotter import Plotter
 import utils.file_io as fio
 import json
-
 
 # "-m yappi" to profile
 
@@ -91,7 +90,7 @@ def run_learn(context):
     return ret, run_cmd
 
 
-context = {'ncores': 4,
+context = {'ncores': 8,
            'directory': 'dvs_mnist_saccade',
            'nv': (32 * 32) + 10,  # Include nc
            'nh': 400,
@@ -124,7 +123,7 @@ context = {'ncores': 4,
            'max_samples_test': 1000,
            'n_samples_train': 1500,  # 1500
            'n_samples_test': 1000,  # 1000
-           'n_epochs': 30,  # 60
+           'n_epochs': 1000,  # 60
            'n_loop': 1,
            'prob_syn': 0.65,
            'init_mean_bias_v': -.1,
@@ -135,7 +134,7 @@ context = {'ncores': 4,
            'input_scale': .5,
            'mean_weight': 0.0,  # useless
            'std_weight': 0.01,
-           'test_every': 1,
+           'test_every': 20,
            'recurrent': False,
            'polarity': 'both',
            'delay': 0.0,
@@ -149,7 +148,7 @@ context = {'ncores': 4,
            'label_frequency': 200}
 
 context['eta_orig'] = context['eta']
-
+plotter = Plotter(os.path.dirname(os.path.abspath(__file__)))
 
 def update_weight_stats(weight_stats):
     stat_dict = (
@@ -175,7 +174,7 @@ if __name__ == '__main__':
         init = True # initialize weights?
         new_test_data = True # generate new test data ras files?
         test = True # test before first training epoch?
-        save = False # save results to result folder?
+        save = True # save results to result folder?
 
 
         # folder = '066__21-07-2018'

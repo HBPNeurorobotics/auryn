@@ -7,13 +7,17 @@ import jaer_data_handler as jhandler
 import pandas as pd
 from matplotlib.lines import Line2D
 import glob
-import ipdb
+import os
 
 
 class Plotter:
     def __init__(self, path_to_pkg):
         self.path_to_pkg = path_to_pkg
         self.path_to_plots = '{}/scripts/plots'.format(self.path_to_pkg)
+        try:
+            os.makedirs(self.path_to_plots)
+        except OSError as e:
+            print(e)
 
     def plot_2d_input_ras(self, path, dimension, start=0, end=sys.maxint, save=False):
         if start > end:
