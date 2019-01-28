@@ -26,7 +26,7 @@ def pandas_loadtxt_2d(f, delimiter=' ', *args, **kwargs):
         out = pd.read_csv(f, *args, delimiter=delimiter, **kwargs).values[:, [0, 1]]
         return out
     except pd.io.common.EmptyDataError, e:
-        print("pandas: Empty Data")
+        print("pandas: file {} contains no data".format(f))
         return np.zeros([0, 2])
 
 

@@ -177,7 +177,7 @@ class Plotter:
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
             data_df, seek = fio.ras_to_df(path, start, end)
-            print(counter)
+            # print(counter)
             ax1 = plt.subplot(num_plots, 1, counter)
             if counter == 1:
                 pass
@@ -241,7 +241,7 @@ class Plotter:
                          markersize=1, alpha=0.2)
                 ax1.set_ylabel("Error")
                 ax1.xaxis.set_major_locator(plt.NullLocator())
-            print(data_df.ts.values.size)
+            # print(data_df.ts.values.size)
             counter += 1
             x1, x2, y1, y2 = ax1.axis()
             ax1.axis((start, end, y1, y2))
