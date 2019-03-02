@@ -233,6 +233,7 @@ if __name__ == '__main__':
         if new_test_data:
             os.system('rm -rf inputs/{directory}/test/'.format(**context))
             os.system('mkdir -p inputs/{directory}/test/'.format(**context))
+
             sample_duration_test, labels_test = gras.create_ras_from_aedat(n_samples_test,
                                                                            context['directory'], "test",
                                                                            randomize=False,

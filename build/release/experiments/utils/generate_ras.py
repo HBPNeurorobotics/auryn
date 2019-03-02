@@ -36,8 +36,9 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
         version = 'aedat3'
 
     if n_samples > len(sample_names):
-        print('Number of total files has to be bigger than number of epoch samples.')
-        return
+        raise ValueError(
+            'Desired number of test samples ({}) is smaller than total amount of samples ({})'.
+            format(n_samples, len(sample_names)))
     else:
         sample_names = [sample_names[i] for i in sample_ids]
 
