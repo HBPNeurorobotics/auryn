@@ -8,7 +8,23 @@ import numpy as np
 import utils.erbp_plotter as plotter
 import utils.file_io as fio
 import json
+import argparse
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='eRBP DvsGesture')
+    parser.add_argument('--n_epochs', type=int, default=4500, metavar='N', help='number of epochs to train')
+    parser.add_argument('--testinterval', type=int, default=20, metavar='N', help='how epochs to run before testing')
+    parser.add_argument('--no_save', type=bool, default=False, metavar='N', help='disables saving into Results directory')
+    parser.add_argument('--seed', type=int, default=1, metavar='S', help='random seed')
+    parser.add_argument('--eta', type=float, default=6e-4, metavar='N', help='learning rate')
+    parser.add_argument('--eta_decay', type=float, default=.98, metavar='N', help='learning rate decay factor')
+    parser.add_argument('--prob_syn', type=float, default=0.6, metavar='N', help='probability passing a spike')
+    parser.add_argument('--output', type=str, default='dvs_gesture_split',
+                        help='folder name for the results')
+    return parser.parse_args()
+
+args = parse_args()
 
 # "-m yappi" to profile
 
@@ -33,7 +49,7 @@ def run_classify(context, labels_test, sample_duration_test):
         --fve  inputs/{directory}/train/{fve} \
         --feh  inputs/{directory}/train/{feh} \
         --ip_v inputs/{directory}/test/{ip_v}\
-        --prob_syn {prob_syn}\
+        --prob_syn 1.\
         --nvis {nv} \
         --nhid {nh} \
         --nout {nc} \
@@ -99,8 +115,8 @@ context = {'ncores': 4,
            'nh2': 200,
            'nh1': 200,
            'nc': 12,
-           'eta': 6e-4,
-           'eta_decay': 0.9,
+           'eta': args.eta,
+           'eta_decay': args.eta_decay,
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -125,9 +141,9 @@ context = {'ncores': 4,
            'max_samples_test': 288,  # useless
            'n_samples_train': 1176,  # 1176
            'n_samples_test': 288,  # 288
-           'n_epochs': 30,  # 10
+           'n_epochs': args.n_epochs,  # 10
            'n_loop': 1,
-           'prob_syn': 0.65,
+           'prob_syn': args.prob_syn,
            'init_mean_bias_v': -.1,
            'init_mean_bias_h': -.1,
            'init_std_bias_v': 1e-32,
@@ -136,7 +152,7 @@ context = {'ncores': 4,
            'input_scale': .5,
            'mean_weight': 0.0,  # useless
            'std_weight': 7.,
-           'test_every': 1,
+           'test_every': args.testinterval,
            'recurrent': False,
            'polarity': 'dual',
            'delay': 0.0,
