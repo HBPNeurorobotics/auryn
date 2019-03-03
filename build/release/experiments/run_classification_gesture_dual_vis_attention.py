@@ -5,7 +5,7 @@ import experimentTools as et
 import traceback
 import pdb
 import numpy as np
-import utils.erbp_plotter as plotter
+from utils.erbp_plotter import Plotter
 import utils.file_io as fio
 import json
 import argparse
@@ -25,6 +25,8 @@ def parse_args():
     return parser.parse_args()
 
 args = parse_args()
+plotter = Plotter(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               '{date:%Y-%m-%d_%H:%M}_dvs_gesture'.format(date=datetime.datetime.now())))
 
 # "-m yappi" to profile
 
