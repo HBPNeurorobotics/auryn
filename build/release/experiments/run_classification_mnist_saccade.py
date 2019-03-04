@@ -139,10 +139,8 @@ context = {'ncores': 8,
            'recurrent': False,
            'polarity': 'both',
            'delay': 0.0,
-           'attention_window_time': 0.0,
-           'attention_window_size': 64,
-           'attention_mechanism': 'median',
-           'attention_window_position_std': 3,
+           'attention_event_amount': 1000,
+           'attention_window_size': 32,
            'input_window_position': False,
            'only_input_position': False,
            'new_pos_weight': 0.1,
@@ -221,20 +219,16 @@ if __name__ == '__main__':
                                                                            event_polarity=context['polarity'],
                                                                            max_neuron_id=max_neuron_id,
                                                                            delay=context['delay'],
-                                                                           attention_window_time=context[
-                                                                               'attention_window_time'],
+                                                                           attention_event_amount=context[
+                                                                               'attention_event_amount'],
                                                                            attention_window_size=context[
                                                                                'attention_window_size'],
                                                                            input_window_position=context[
                                                                                'input_window_position'],
-                                                                           attention_window_position_std=context[
-                                                                               'attention_window_position_std'],
                                                                            only_input_position=context[
                                                                                'only_input_position'],
                                                                            new_pos_weight=context['new_pos_weight'],
                                                                            recurrent=context['recurrent'],
-                                                                           attention_mechanism=context[
-                                                                               'attention_mechanism'],
                                                                            label_frequency=context['label_frequency'])
             context['simtime_test'] = sample_duration_test[-1]
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'w+') as simtime_file:
@@ -288,20 +282,16 @@ if __name__ == '__main__':
                                                                              event_polarity=context['polarity'],
                                                                              max_neuron_id=max_neuron_id,
                                                                              delay=context['delay'],
-                                                                             attention_window_time=context[
-                                                                                 'attention_window_time'],
+                                                                             attention_event_amount=context[
+                                                                                 'attention_event_amount'],
                                                                              attention_window_size=context[
                                                                                  'attention_window_size'],
                                                                              input_window_position=context[
                                                                                  'input_window_position'],
-                                                                             attention_window_position_std=context[
-                                                                                 'attention_window_position_std'],
                                                                              only_input_position=context[
                                                                                  'only_input_position'],
                                                                              new_pos_weight=context['new_pos_weight'],
                                                                              recurrent=context['recurrent'],
-                                                                             attention_mechanism=context[
-                                                                                 'attention_mechanism'],
                                                                              label_frequency=context['label_frequency'])
             context['simtime_train'] = sample_duration_train[-1]
             print('New train data: {} samples'.format(n_samples_train))
