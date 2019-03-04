@@ -6,6 +6,7 @@ import file_io as fio
 import jaer_data_handler as jhandler
 import pandas as pd
 from matplotlib.lines import Line2D
+import matplotlib.patches as patches
 import glob
 import os
 
@@ -72,7 +73,21 @@ class Plotter:
         self.plot_heat_map(bucket, 'Spatial event distribution - label 1'.format(start, end), save=True,
                            image_title=image_title, dynamic_v=True)
 
-    def plot_2d_events_from_aedat(self, path, start=0, end=sys.maxint, image_title='', version='aedat3'):
+    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title=''):
+        bucket = np.zeros((128, 128), dtype=int)
+        for event in df.itertuples():
+            if event.p == 1:
+                bucket[event.y][event.x] += 1
+            elif event.p == 0:
+                bucket[event.y][event.x] -= 1
+        bucket[bucket > 0] = 1
+        bucket[bucket < 0] = -1
+        self.plot_heat_map(bucket, plot_title, save=True,
+                           image_title=image_title, show_cbar=False, vmin=-1, vmax=1,
+                           centroid=centroid)
+
+
+    def plot_2d_events_from_aedat(self, path, start=0, end=sys.maxint, image_title='', version='aedat3', attention_window=False, event_amount=1000):
         if version == 'aedat3':
             timestamps, xaddr, yaddr, pol = jhandler.load_aedat31(path, debug=0)
         else:
@@ -87,16 +102,13 @@ class Plotter:
         if end > max(df.ts):
             end = max(df.ts)
         df = df[(df.ts >= start) & (df.ts <= end)]
-        bucket = np.zeros((128, 128), dtype=int)
-        for event in df.itertuples():
-            if event.p == 1:
-                bucket[event.y][event.x] += 1
-            elif event.p == 0:
-                bucket[event.y][event.x] -= 1
-        bucket[bucket > 0] = 1
-        bucket[bucket < 0] = -1
-        self.plot_heat_map(bucket, 'Events from {:0.2f}s to {:.2f}s'.format(start, end), save=True,
-                           image_title=image_title, show_cbar=False, vmin=-1, vmax=1)
+        if attention_window:
+            centroid = df.loc[:, ['x', 'y']].rolling(window=event_amount, min_periods=1).median().astype(int).mean()
+        else:
+            centroid=None
+        plot_title='Events from {:0.2f}s to {:.2f}s'.format(start, end)
+        self.plot_2d_events_from_df(df, centroid, plot_title, image_title)
+
 
     def restore_ts_order(self, timestamps):
         for i in range(len(timestamps) - 1):
@@ -105,20 +117,33 @@ class Plotter:
                 return timestamps
 
     def plot_heat_map(self, bucket, plot_title, save=False, image_title='', show_cbar=True, vmin=0, vmax=10,
-                      dynamic_v=False):
+                      dynamic_v=False, centroid=None, attention_window_size=32):
         plt.clf()
-        fig, ax = plt.subplots()
+        fig = plt.figure(frameon=False, figsize=(5,5))
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+
         if dynamic_v:
-            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest')
+            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', aspect='normal')
         else:
-            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', vmin=vmin, vmax=vmax)
+            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', vmin=vmin, vmax=vmax, aspect='normal')
         # ax.set_title(plot_title)
         if show_cbar:
             cbar = fig.colorbar(cax)
         else:
             custom_lines = [Line2D([0], [0], color=plt.cm.viridis(1.), lw=0, marker='s'),
                             Line2D([0], [0], color=plt.cm.viridis(-1.), lw=0, marker='s')]
-            plt.legend(custom_lines, ['ON', 'OFF'], handlelength=0.5, borderpad=0.5, framealpha=0.5)
+            plt.legend(custom_lines, ['ON', 'OFF'], handlelength=0.5, borderpad=0.5, framealpha=0.5, numpoints=1)
+
+        # fig.tight_layout()
+        if centroid is not None:
+            rect = patches.Rectangle((int(centroid.centroid_x - attention_window_size/2.),
+                                      int(centroid.centroid_y - attention_window_size/2.)),
+                                     attention_window_size, attention_window_size,
+                                     linewidth=2, edgecolor='r',facecolor='none')
+            ax.add_patch(rect)
+
         if save:
             plt.savefig('{}/{}.png'.format(self.path_to_plots, image_title), dpi=300, bbox_inches='tight')
         else:
