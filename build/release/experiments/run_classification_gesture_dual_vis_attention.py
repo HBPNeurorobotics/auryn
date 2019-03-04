@@ -9,19 +9,22 @@ from utils.erbp_plotter import Plotter
 import utils.file_io as fio
 import json
 import argparse
+import datetime
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='eRBP DvsGesture')
     parser.add_argument('--n_epochs', type=int, default=4500, metavar='N', help='number of epochs to train')
+    parser.add_argument('--n_hidden', type=int, default=400, metavar='N', help='number of hidden units')
     parser.add_argument('--testinterval', type=int, default=20, metavar='N', help='how epochs to run before testing')
     parser.add_argument('--no_save', type=bool, default=False, metavar='N', help='disables saving into Results directory')
-    parser.add_argument('--seed', type=int, default=1, metavar='S', help='random seed')
     parser.add_argument('--eta', type=float, default=6e-4, metavar='N', help='learning rate')
     parser.add_argument('--eta_decay', type=float, default=.98, metavar='N', help='learning rate decay factor')
     parser.add_argument('--prob_syn', type=float, default=0.6, metavar='N', help='probability passing a spike')
     parser.add_argument('--output', type=str, default='dvs_gesture_split',
                         help='folder name for the results')
+    parser.add_argument('--plot_as_training', type=bool, default=False,
+                        help='plot spiketrains and weights while learning')
     return parser.parse_args()
 
 args = parse_args()
@@ -61,9 +64,6 @@ def run_classify(context, labels_test, sample_duration_test):
     if ret == 0:
         print('ran')
 
-    plotter.plot_ras_spikes('outputs/{}/test/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=15,
-                            layers=['out'], res=context['nv'] - context['nc'], number_of_classes=context['nc'],
-                            save=True, input_att_window=context['input_window_position'])
     # first 5 labels: 7,2,1,0,4
     rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, output_spikes_per_label, ouput_spikes_per_label_norm, snr, snr_per_label = elib.process_test_classification(
         context, sample_duration_test, labels_test)
@@ -113,7 +113,7 @@ def run_learn(context):
 context = {'ncores': 4,
            'directory': 'dvs_gesture_split',
            'nv': (64 * 64) * 2 + 12 + 2*128,  # Include nc
-           'nh': 400,
+           'nh': args.n_hidden,
            'nh2': 200,
            'nh1': 200,
            'nc': 12,
@@ -158,10 +158,8 @@ context = {'ncores': 4,
            'recurrent': False,
            'polarity': 'dual',
            'delay': 0.0,
-           'attention_window_time': 0.02,
-           'attention_window_size': 64,
-           'attention_mechanism': 'median',
-           'attention_window_position_std': 5,
+           'attention_event_amount': 1000,
+           'attention_window_size': 32,
            'input_window_position': True,
            'only_input_position': False,
            'new_pos_weight': 1.,
@@ -244,20 +242,16 @@ if __name__ == '__main__':
                                                                            cache=True,
                                                                            max_neuron_id=max_neuron_id,
                                                                            delay=context['delay'],
-                                                                           attention_window_time=context[
-                                                                               'attention_window_time'],
+                                                                           attention_event_amount=context[
+                                                                               'attention_event_amount'],
                                                                            attention_window_size=context[
                                                                                'attention_window_size'],
                                                                            input_window_position=context[
                                                                                'input_window_position'],
-                                                                           attention_window_position_std=context[
-                                                                               'attention_window_position_std'],
                                                                            only_input_position=context[
                                                                                'only_input_position'],
                                                                            new_pos_weight=context['new_pos_weight'],
                                                                            recurrent=context['recurrent'],
-                                                                           attention_mechanism=context[
-                                                                               'attention_mechanism'],
                                                                            label_frequency=context['label_frequency'])
             context['simtime_test'] = sample_duration_test[-1]
             print(context['simtime_test'])
@@ -295,7 +289,19 @@ if __name__ == '__main__':
 
         weight_stats = update_weight_stats(weight_stats)
         output_weights = update_output_weights(output_weights)
+
+        if save:
+            d = et.mksavedir()
+            M = elib.read_allparamters_dual(context)
+            et.globaldata.context = context
+            et.save()
+            et.save(context, 'context.pkl')
+            et.save(sys.argv, 'sysargv.pkl')
+            et.save(args, 'args.pkl')
+            et.save(M, 'M.pkl')
+
         for i in xrange(n_epochs):
+            print('Epoch {} / {}'.format(i, n_epochs))
             sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train,
                                                                              context['directory'], "train",
                                                                              randomize=True,
@@ -305,53 +311,62 @@ if __name__ == '__main__':
                                                                              cache=True,
                                                                              max_neuron_id=max_neuron_id,
                                                                              delay=context['delay'],
-                                                                             attention_window_time=context[
-                                                                                 'attention_window_time'],
+                                                                             attention_event_amount=context[
+                                                                                 'attention_event_amount'],
                                                                              attention_window_size=context[
                                                                                  'attention_window_size'],
                                                                              input_window_position=context[
                                                                                  'input_window_position'],
-                                                                             attention_window_position_std=context[
-                                                                                 'attention_window_position_std'],
                                                                              only_input_position=context[
                                                                                  'only_input_position'],
                                                                              new_pos_weight=context['new_pos_weight'],
                                                                              recurrent=context['recurrent'],
-                                                                             attention_mechanism=context[
-                                                                                 'attention_mechanism'],
                                                                              label_frequency=context['label_frequency']
                                                                              )
             context['simtime_train'] = sample_duration_train[-1]
             print(context['simtime_train'])
-            print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
+            print('New train data: {} samples'.format(n_samples_train))
             ret, run_cmd = run_learn(context)
-
-            plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'),
-                                    start=sample_duration_train[-3],
-                                    end=sample_duration_train[-1] - context['sample_pause_train'],
-                                    layers=['vis', 'hid', 'out'],
-                                    res=context['nv'] - context['nc'],
-                                    number_of_classes=context['nc'],
-                                    save=True,
-                                    input_att_window=context['input_window_position'])
 
             context['eta'] = context['eta'] * context['eta_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
             M = elib.process_parameters_rbp_dual(context)
+            bestM = M
 
-            plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
-            plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
-                                          nh1=context['nh1'], save=True)
             output_weights = update_output_weights(output_weights)
             weight_stats = update_weight_stats(weight_stats)
             if test_every > 0:
                 if i % test_every == test_every - 1:
+                    if args.plot_as_training:
+                        plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
+                        plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
+                                                      nh1=context['nh1'], save=True)
+                        plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'),
+                                                start=sample_duration_train[-3],
+                                                end=sample_duration_train[-1] - context['sample_pause_train'],
+                                                layers=['vis', 'hid', 'out'],
+                                                res=context['nv'] - context['nc'],
+                                                number_of_classes=context['nc'],
+                                                save=True,
+                                                input_att_window=context['input_window_position'])
+
                     res, snr = run_classify(context, labels_test, sample_duration_test)
                     acc_hist.append([i + 1, res])
                     snr_hist.append([i + 1, snr])
                     if res > last_perf:
                         last_perf = res
                         bestM = elib.read_allparamters_dual(context)
+                    if save:
+                        et.save(spkcnt, 'spkcnt.pkl')
+                        et.save(acc_hist, 'acc_hist.pkl')
+                        et.save(snr_hist, 'snr_hist.pkl')
+                        et.annotate('res', text=str(acc_hist))
+                        et.save(bestM, 'bestM.pkl')
+
+                        elib.textannotate('last_res', text=str(acc_hist))
+                        elib.textannotate('last_dir', text=d)
+
+
 
         plotter.plot_weight_stats(weight_stats, save=True)
         plotter.plot_output_weights_over_time(output_weights, save=True)
@@ -362,7 +377,6 @@ if __name__ == '__main__':
 
         if save:
             M = elib.read_allparamters_dual(context)
-            d = et.mksavedir()
             et.globaldata.context = context
             et.save()
             et.save(context, 'context.pkl')
