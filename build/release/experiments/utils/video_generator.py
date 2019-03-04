@@ -56,7 +56,7 @@ def generate_video_from_aedat(input_path, output_path, aedat_version='aedat3', r
     df = pd.DataFrame({'ts': timestamps, 'x': xaddr, 'y': yaddr, 'p': pol})
     df.ts = df.ts * 1e-6
 
-    framerate = 60
+    framerate = 30
     dt = 1. / framerate
     max_ts_in_s = df.ts.max()
     # compute centroids and add them to the event df
@@ -77,7 +77,8 @@ def generate_video_from_aedat(input_path, output_path, aedat_version='aedat3', r
                                        image_title='{}/events{:05d}'.format(file_name, i))
 
     # animate the images with ffmpeg
-    os.system('ffmpeg -r 60 -f image2 -s 1280x720 -i {tmp_folder}/events%05d.png -vcodec libx264 -crf 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p {output}'.format(
+    os.system('ffmpeg -y -r {framerate} -f image2 -s 1280x720 -i {tmp_folder}/events%05d.png -vcodec libx264 -crf 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p {output}'.format(
+        framerate=framerate,
         output=output_path,
         tmp_folder=tmp_folder_pics))
     if remove_tmp_pics:
