@@ -42,9 +42,9 @@ def run_classify(context, labels_test, sample_duration_test):
         --learn false \
         --eta 0.\
         --simtime {simtime_test} \
-        --record_full false \
+        --record_full true \
         --record_rasters false \
-        --record_rates true \
+        --record_rates false \
         --dir  outputs/{directory}/test/ \
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \
@@ -85,9 +85,9 @@ def run_learn(context):
     run_cmd = 'mpirun -n {ncores} ./exp_rbp_flash \
         --learn true \
         --simtime {simtime_train} \
-        --record_full true \
-        --record_rasters true \
-        --record_rates true \
+        --record_full false \
+        --record_rasters false \
+        --record_rates false \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
         --prob_syn {prob_syn}\
