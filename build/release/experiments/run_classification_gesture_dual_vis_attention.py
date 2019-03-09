@@ -214,7 +214,7 @@ if __name__ == '__main__':
             spkcnt = et.load('spkcnt.pkl')
             snr_hist = et.load('snr_hist.pkl')
             bestM = et.load('bestM.pkl')
-            start_epoch = acc_hist[-1][0]
+            start_epoch = acc_hist[-1][0] + 1
 
             print('old_c: {}'.format(old_context))
             print('context before: {}'.format(context))
