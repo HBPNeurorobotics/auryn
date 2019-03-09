@@ -73,8 +73,8 @@ class Plotter:
         self.plot_heat_map(bucket, 'Spatial event distribution - label 1'.format(start, end), save=True,
                            image_title=image_title, dynamic_v=True)
 
-    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title=''):
-        bucket = np.zeros((128, 128), dtype=int)
+    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title='', hist_shape = (128,128)):
+        bucket = np.zeros(hist_shape, dtype=int)
         for event in df.itertuples():
             if event.p == 1:
                 bucket[event.y][event.x] += 1
@@ -125,9 +125,9 @@ class Plotter:
         fig.add_axes(ax)
 
         if dynamic_v:
-            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', aspect='normal')
+            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', aspect='auto')
         else:
-            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', vmin=vmin, vmax=vmax, aspect='normal')
+            cax = ax.imshow(bucket, cmap='viridis', interpolation='nearest', vmin=vmin, vmax=vmax, aspect='auto')
         # ax.set_title(plot_title)
         if show_cbar:
             cbar = fig.colorbar(cax)

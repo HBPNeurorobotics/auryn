@@ -32,11 +32,11 @@ def get_attention_df_rolling(df, event_amount, attention_window_size):
 
 
 def take_window_events(attention_window_size, centroids, df):
-    df.loc[:, ['x', 'y']] -= centroids - int(attention_window_size / 2)
-
-    df = df.loc[(df.x >= 0) & (df.x < attention_window_size) & (df.y >= 0) & (df.y < attention_window_size)].copy()
-    calc_n_id(attention_window_size, df)
-    return df
+    df_out = df.copy(deep=True)
+    df_out.loc[:, ['x', 'y']] -= centroids - int(attention_window_size / 2)
+    df_out = df_out.loc[(df_out.x >= 0) & (df_out.x < attention_window_size) & (df_out.y >= 0) & (df_out.y < attention_window_size)]
+    calc_n_id(attention_window_size, df_out)
+    return df_out
 
 
 
