@@ -89,8 +89,8 @@ def run_learn(context):
         --learn true \
         --simtime {simtime_train} \
         --record_full true \
-        --record_rasters false \
-        --record_rates false \
+        --record_rasters true \
+        --record_rates true \
         --dir outputs/{directory}/train/ \
         --eta  {eta}\
         --prob_syn {prob_syn}\
@@ -236,7 +236,8 @@ if __name__ == '__main__':
         if context['input_window_position']:
             max_neuron_id -= 128 * 2
 
-        if init:
+        if args.resume is '':
+            print('Cleaning previous weights')
             os.system('rm -rf inputs/{directory}/train/'.format(**context))
             os.system('mkdir -p inputs/{directory}/train/'.format(**context))
             elib.create_rbp_init(base_filename='inputs/{directory}/train/fwmat'.format(**context), **context)
@@ -270,7 +271,6 @@ if __name__ == '__main__':
                 json.dump(
                     {'context': context, 'labels_test': labels_test, 'sample_duration_test': sample_duration_test},
                     simtime_file)
-                print('New test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
         else:
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'r') as simtime_file:
                 old_test_sim = json.load(simtime_file)
@@ -283,7 +283,7 @@ if __name__ == '__main__':
                 sample_duration_test = old_test_sim['sample_duration_test']
                 context['simtime_test'] = sample_duration_test[-1]
                 print(context['simtime_test'])
-                print('Old test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
+        print('Number of test samples: {}'.format(n_samples_test))
 
         # plotter.plot_2d_input_ras('{}/{}'.format(context['directory'], 'test'), 32, 0, 3)
 
@@ -321,7 +321,6 @@ if __name__ == '__main__':
             context['eta'] = context['eta'] * context['eta_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
             M = elib.process_parameters_rbp_dual(context)
-            bestM = M
 
             output_weights = update_output_weights(output_weights)
             weight_stats = update_weight_stats(weight_stats)
@@ -350,7 +349,6 @@ if __name__ == '__main__':
                         et.globaldata.context = context
                         et.save()
                         et.save(sys.argv, 'sysargv.pkl')
-                        M = elib.read_allparamters_dual(context)
                         et.save(M, 'M.pkl')
                         et.save(bestM, 'bestM.pkl')
                         et.save(args, 'args.pkl')
@@ -373,7 +371,6 @@ if __name__ == '__main__':
             print(snr_hist)
 
         if save:
-            M = elib.read_allparamters_dual(context)
             et.globaldata.context = context
             et.save()
             et.save(context, 'context.pkl')
