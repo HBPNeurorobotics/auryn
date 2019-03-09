@@ -218,7 +218,7 @@ if __name__ == '__main__':
             print('context before: {}'.format(context))
             context.update(old_context)
             print('context after: {}'.format(context))
-            # elib.write_allparameters_rbp(M, context)
+            elib.write_allparameters_rbp(M, context)
 
 
         max_samples_train = context['max_samples_train']
@@ -366,6 +366,7 @@ if __name__ == '__main__':
                         et.save(snr_hist, 'snr_hist.pkl')
                         et.annotate('res', text=str(acc_hist))
                         et.save(bestM, 'bestM.pkl')
+                        et.save(context, 'context.pkl')
 
                         elib.textannotate('last_res', text=str(acc_hist))
                         elib.textannotate('last_dir', text=d)
