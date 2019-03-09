@@ -14,17 +14,20 @@ import datetime
 
 def parse_args():
     parser = argparse.ArgumentParser(description='eRBP DvsGesture')
-    parser.add_argument('--n_epochs', type=int, default=4500, metavar='N', help='number of epochs to train')
-    parser.add_argument('--n_hidden', type=int, default=400, metavar='N', help='number of hidden units')
-    parser.add_argument('--testinterval', type=int, default=20, metavar='N', help='how epochs to run before testing')
-    parser.add_argument('--no_save', type=bool, default=False, metavar='N', help='disables saving into Results directory')
-    parser.add_argument('--eta', type=float, default=6e-4, metavar='N', help='learning rate')
-    parser.add_argument('--eta_decay', type=float, default=.98, metavar='N', help='learning rate decay factor')
-    parser.add_argument('--prob_syn', type=float, default=0.6, metavar='N', help='probability passing a spike')
+    parser.add_argument('--n_epochs', type=int, default=4500, help='number of epochs to train')
+    parser.add_argument('--n_hidden', type=int, default=400, help='number of hidden units')
+    parser.add_argument('--testinterval', type=int, default=20, help='how epochs to run before testing')
+    parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
+    parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
+    parser.add_argument('--eta_decay', type=float, default=.98, help='learning rate decay factor')
+    parser.add_argument('--prob_syn', type=float, default=0.6, help='probability passing a spike')
     parser.add_argument('--output', type=str, default='dvs_gesture_split',
                         help='folder name for the results')
     parser.add_argument('--plot_as_training', type=bool, default=False,
                         help='plot spiketrains and weights while learning')
+    parser.add_argument('--gen_data', action='store_true', default=False,
+                        help='generate train and test data')
+    parser.add_argument('--resume', type=str, default='', help='Resume training from directory')
     return parser.parse_args()
 
 args = parse_args()
@@ -42,7 +45,7 @@ def run_classify(context, labels_test, sample_duration_test):
         --learn false \
         --eta 0.\
         --simtime {simtime_test} \
-        --record_full true \
+        --record_full false \
         --record_rasters false \
         --record_rates false \
         --dir  outputs/{directory}/test/ \
@@ -85,7 +88,7 @@ def run_learn(context):
     run_cmd = 'mpirun -n {ncores} ./exp_rbp_flash \
         --learn true \
         --simtime {simtime_train} \
-        --record_full false \
+        --record_full true \
         --record_rasters false \
         --record_rates false \
         --dir outputs/{directory}/train/ \
@@ -108,7 +111,6 @@ def run_learn(context):
         '.format(**context)
     ret = os.system(run_cmd)
     return ret, run_cmd
-
 
 context = {'ncores': 4,
            'directory': 'dvs_gesture_split',
@@ -164,8 +166,8 @@ context = {'ncores': 4,
            'only_input_position': False,
            'new_pos_weight': 1.,
            'label_frequency': 500}
-
 context['eta_orig'] = context['eta']
+
 
 
 def update_weight_stats(weight_stats):
@@ -189,28 +191,35 @@ def update_output_weights(output_weights):
 if __name__ == '__main__':
     try:
         last_perf = (0.0, 0.0)
-        init = True
-        new_test_data = True
+        init = args.gen_data
+        new_test_data = args.gen_data
         test = True
         save = True
+        start_epoch = 0
 
-        folder = '075__04-08-2018'
-        directory = 'Results/{}/'.format(folder)
-        directory = None
-        if directory is not None:
-            print 'Loading previous run...'
-            et.globaldata.directory = directory
+        acc_hist = []
+        snr_hist = []
+        weight_stats = {}
+        output_weights = []
+        spkcnt = [None for i in range(context['n_epochs'])]
+
+        if args.resume is not '':
+            print 'Loading previous run from {}'.format(args.resume)
+            et.globaldata.directory = args.resume
             M = et.load('M.pkl')
             old_context = et.load('context.pkl')
+            acc_hist = et.load('acc_hist.pkl')
+            spkcnt = et.load('spkcnt.pkl')
+            snr_hist = et.load('snr_hist.pkl')
+            bestM = et.load('bestM.pkl')
+            start_epoch = acc_hist[-1][0]
+
             print('old_c: {}'.format(old_context))
             print('context before: {}'.format(context))
             context.update(old_context)
             print('context after: {}'.format(context))
+            # elib.write_allparameters_rbp(M, context)
 
-            elib.write_allparameters_rbp(M, context)
-            context['test_every'] = 20
-            context['n_epochs'] = 0
-            context['n_samples_train'] = 1
 
         max_samples_train = context['max_samples_train']
         max_samples_test = context['max_samples_test']
@@ -274,11 +283,6 @@ if __name__ == '__main__':
                 print(context['simtime_test'])
                 print('Old test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
 
-        acc_hist = []
-        snr_hist = []
-        weight_stats = {}
-        output_weights = []
-        spkcnt = [None for i in range(n_epochs)]
 
         if test:
             res, snr = run_classify(context, labels_test, sample_duration_test)
@@ -300,7 +304,7 @@ if __name__ == '__main__':
             et.save(args, 'args.pkl')
             et.save(M, 'M.pkl')
 
-        for i in xrange(n_epochs):
+        for i in xrange(start_epoch, n_epochs):
             print('Epoch {} / {}'.format(i, n_epochs))
             sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train,
                                                                              context['directory'], "train",
