@@ -16,6 +16,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='eRBP DvsGesture')
     parser.add_argument('--n_epochs', type=int, default=4500, help='number of epochs to train')
     parser.add_argument('--n_hidden', type=int, default=400, help='number of hidden units')
+    parser.add_argument('--n_cores', type=int, default=4, help='number of cores')
     parser.add_argument('--testinterval', type=int, default=20, help='how epochs to run before testing')
     parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
     parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
@@ -112,7 +113,7 @@ def run_learn(context):
     ret = os.system(run_cmd)
     return ret, run_cmd
 
-context = {'ncores': 4,
+context = {'ncores': args.n_cores,
            'directory': 'dvs_gesture_split',
            'nv': (64 * 64) * 2 + 12 + 2*128,  # Include nc
            'nh': args.n_hidden,
