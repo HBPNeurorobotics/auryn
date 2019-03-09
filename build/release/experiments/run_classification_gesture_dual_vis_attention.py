@@ -190,13 +190,15 @@ def update_output_weights(output_weights):
 
 if __name__ == '__main__':
     try:
+
         last_perf = (0.0, 0.0)
         init = args.gen_data
         new_test_data = args.gen_data
-        test = True
         save = True
-        start_epoch = 0
+        et.mksavedir()
+        et.globaldata.context = context
 
+        start_epoch = 0
         acc_hist = []
         snr_hist = []
         weight_stats = {}
@@ -283,26 +285,10 @@ if __name__ == '__main__':
                 print(context['simtime_test'])
                 print('Old test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
 
-
-        if test:
-            res, snr = run_classify(context, labels_test, sample_duration_test)
-            acc_hist.append([0, res])
-            snr_hist.append([0, snr])
-
         # plotter.plot_2d_input_ras('{}/{}'.format(context['directory'], 'test'), 32, 0, 3)
 
         weight_stats = update_weight_stats(weight_stats)
         output_weights = update_output_weights(output_weights)
-
-        if save:
-            d = et.mksavedir()
-            M = elib.read_allparamters_dual(context)
-            et.globaldata.context = context
-            et.save()
-            et.save(context, 'context.pkl')
-            et.save(sys.argv, 'sysargv.pkl')
-            et.save(args, 'args.pkl')
-            et.save(M, 'M.pkl')
 
         for i in xrange(start_epoch, n_epochs):
             print('Epoch {} / {}'.format(i, n_epochs))
@@ -361,11 +347,17 @@ if __name__ == '__main__':
                         last_perf = res
                         bestM = elib.read_allparamters_dual(context)
                     if save:
+                        et.globaldata.context = context
+                        et.save()
+                        et.save(sys.argv, 'sysargv.pkl')
+                        M = elib.read_allparamters_dual(context)
+                        et.save(M, 'M.pkl')
+                        et.save(bestM, 'bestM.pkl')
+                        et.save(args, 'args.pkl')
                         et.save(spkcnt, 'spkcnt.pkl')
                         et.save(acc_hist, 'acc_hist.pkl')
                         et.save(snr_hist, 'snr_hist.pkl')
                         et.annotate('res', text=str(acc_hist))
-                        et.save(bestM, 'bestM.pkl')
                         et.save(context, 'context.pkl')
 
                         elib.textannotate('last_res', text=str(acc_hist))
