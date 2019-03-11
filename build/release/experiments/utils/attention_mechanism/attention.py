@@ -1,7 +1,6 @@
 import numpy as np
 
 import pandas as pd
-from IPython import embed
 from tqdm import tqdm
 
 from online_median_heap import OnlineMedianFinder
@@ -33,36 +32,12 @@ def get_attention_df_rolling(df, event_amount, attention_window_size):
 
 
 def take_window_events(attention_window_size, centroids, df):
-    df.loc[:, ['x', 'y']] -= centroids - int(attention_window_size / 2)
+    df_out = df.copy(deep=True)
+    df_out.loc[:, ['x', 'y']] -= centroids - int(attention_window_size / 2)
+    df_out = df_out.loc[(df_out.x >= 0) & (df_out.x < attention_window_size) & (df_out.y >= 0) & (df_out.y < attention_window_size)]
+    calc_n_id(attention_window_size, df_out)
+    return df_out
 
-    df = df.loc[(df.x >= 0) & (df.x < attention_window_size) & (df.y >= 0) & (df.y < attention_window_size)].copy()
-    calc_n_id(attention_window_size, df)
-    return df
-
-
-# deprecated
-def get_attention_df_online(df, event_amount):
-    embed()
-    omf_x = OnlineMedianFinder()
-    omf_y = OnlineMedianFinder()
-    x = []
-    y = []
-    for i, event in enumerate(tqdm(df.itertuples())):
-        omf_x.add_element(event.x)
-        omf_y.add_element(event.y)
-        x.append(event.x - omf_x.currentMedian)
-        y.append(event.y - omf_y.currentMedian)
-        # print(len(omf_y.smallElements)+len(omf_y.bigElements))
-        if i > event_amount:
-            try:
-                omf_x.remove_element(df.iloc[i - event_amount].x)
-                omf_y.remove_element(df.iloc[i - event_amount].y)
-            except ValueError:
-                print('x', omf_x.currentMedian, omf_x.smallElements.getheap(), omf_x.bigElements.getheap(),
-                      df.iloc[i - event_amount].x)
-                print('y', omf_y.currentMedian, omf_y.smallElements.getheap(), omf_y.bigElements.getheap(),
-                      df.iloc[i - event_amount].y)
-    return pd.DataFrame({'x': x, 'y': y, 'ts': df.ts, 'p': df.p})
 
 
 def get_centroid_of_df(event_slice, half_att_win, clip, attention_mechanism):

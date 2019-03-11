@@ -219,7 +219,10 @@ def get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res, event_p
             max_id_per_cam = att_win_size * att_win_size
         elif crop:
             bag_events_df = attention.take_window_events(down_sample_res,
-                                                         pd.DataFrame({'x': [dvs_res / 2 + down_sample_res / 2 - 35]*bag_events_df.shape[0], 'y': [dvs_res / 2 + down_sample_res / 2 - 5]*bag_events_df.shape[0]}),
+                                                         pd.DataFrame({
+                                                             'x': [dvs_res / 2 + down_sample_res / 2 - 35]*bag_events_df.shape[0],
+                                                             'y': [dvs_res / 2 + down_sample_res / 2 - 5]*bag_events_df.shape[0]
+                                                         }),
                                                          bag_events_df)
             max_id_per_cam = down_sample_res * down_sample_res
         else:

@@ -772,11 +772,14 @@ def sum_csr(a):
 # directory = 'outputs/mnist/train/'
 def collect_wmat(directory, con_id):
     from scipy.sparse import csr_matrix
-    filenames = '{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory)  # Uses wierd file naming by auryn
+    filenames = os.path.join(directory, 'coba.*..{0}.*.wmat'.format(con_id))  # Uses wierd file naming by auryn
     from scipy.io import mmread
     a = []
     for f in glob.glob(filenames):
         a.append(mmread(f))
+
+    if len(a) == 0:
+        raise ValueError('There was no weights to load')
 
     if numpy_version_largerthan('1.7.0'):
         return csr_matrix(sum(a))
@@ -790,7 +793,7 @@ def collect_wmat(directory, con_id):
 
 def collect_wmat_auto(directory, con_id):
     from scipy.sparse import csr_matrix
-    filenames = '{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory)  # Uses wierd file naming by auryn
+    filenames = os.path.join(directory, 'coba.*..{0}.*.wmat'.format(con_id))  # Uses wierd file naming by auryn
     from scipy.io import mmread
     a = []
     ggf = glob.glob(filenames)
@@ -799,6 +802,9 @@ def collect_wmat_auto(directory, con_id):
     name = extract_wmat_name(ggf[0])
     for f in ggf:
         a.append(mmread(f))
+
+    if len(a) == 0:
+        raise ValueError('There was no weights to load')
 
     if numpy_version_largerthan('1.7.0'):
         return csr_matrix(sum(a)), name
