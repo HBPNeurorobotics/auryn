@@ -14,14 +14,14 @@ import datetime
 
 def parse_args():
     parser = argparse.ArgumentParser(description='eRBP DvsGesture')
-    parser.add_argument('--n_epochs', type=int, default=4500, help='number of epochs to train')
+    parser.add_argument('--n_epochs', type=int, default=100, help='number of epochs to train')
     parser.add_argument('--n_hidden', type=int, default=400, help='number of hidden units')
     parser.add_argument('--n_cores', type=int, default=4, help='number of cores')
-    parser.add_argument('--testinterval', type=int, default=20, help='how epochs to run before testing')
+    parser.add_argument('--testinterval', type=int, default=5, help='how epochs to run before testing')
     parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
     parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
     parser.add_argument('--eta_decay', type=float, default=.98, help='learning rate decay factor')
-    parser.add_argument('--prob_syn', type=float, default=0.6, help='probability passing a spike')
+    parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
     parser.add_argument('--output', type=str, default='dvs_gesture_split',
                         help='folder name for the results')
     parser.add_argument('--plot_as_training', type=bool, default=False,
@@ -113,12 +113,14 @@ def run_learn(context):
     ret = os.system(run_cmd)
     return ret, run_cmd
 
+n_rows = 32
+
 context = {'ncores': args.n_cores,
            'directory': 'dvs_gesture_split',
-           'nv': (64 * 64) * 2 + 12 + 2*128,  # Include nc
+           'nv': (n_rows * n_rows) * 2 + 12,  # Include nc
            'nh': args.n_hidden,
-           'nh2': 200,
-           'nh1': 200,
+           'nh2': args.n_hidden // 2,
+           'nh1': args.n_hidden // 2,
            'nc': 12,
            'eta': args.eta,
            'eta_decay': args.eta_decay,
@@ -141,7 +143,7 @@ context = {'ncores': args.n_cores,
            'binary': False,
            'sample_pause_train': 0.4,
            'sample_pause_test': 0.4,
-           'sigma': 0e-3,
+           'sigma': 0.0,
            'max_samples_train': 1176,  # useless
            'max_samples_test': 288,  # useless
            'n_samples_train': 1176,  # 1176
@@ -162,10 +164,10 @@ context = {'ncores': args.n_cores,
            'polarity': 'dual',
            'delay': 0.0,
            'attention_event_amount': 1000,
-           'attention_window_size': 32,
-           'input_window_position': True,
+           'attention_window_size': n_rows,
+           'input_window_position': False,
            'only_input_position': False,
-           'new_pos_weight': 1.,
+           'new_pos_weight': .1,
            'label_frequency': 500}
 context['eta_orig'] = context['eta']
 
