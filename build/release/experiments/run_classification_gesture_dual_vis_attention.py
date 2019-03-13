@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--eta_decay', type=float, default=.98, help='learning rate decay factor')
     parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
     parser.add_argument('--output', type=str, default='dvs_gesture_split', help='folder name for the results')
-    parser.add_argument('--plot_as_training', type=bool, default=False, help='plot spiketrains and weights while learning')
+    parser.add_argument('--plot_as_training', action='store_true', default=False, help='plot spiketrains and weights while learning')
     parser.add_argument('--gen_data', action='store_true', default=False, help='generate train and test data')
     parser.add_argument('--test_first', action='store_true', default=False, help='run one test before starting to learn')
 
@@ -340,22 +340,23 @@ if __name__ == '__main__':
             output_weights = update_output_weights(output_weights)
             weight_stats = update_weight_stats(weight_stats)
 
+            if args.plot_as_training:
+                plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
+                plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
+                                              nh1=context['nh1'], save=True)
+                plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'),
+                                        start=sample_duration_train[-3],
+                                        end=sample_duration_train[-1] - context['sample_pause_train'],
+                                        layers=['vis', 'hid', 'out'],
+                                        res=context['nv'] - context['nc'],
+                                        number_of_classes=context['nc'],
+                                        save=True,
+                                        input_att_window=context['input_window_position'])
+
+
             print("---- learning epoch iteration took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
             if test_every > 0:
                 if i % test_every == test_every:
-                    if args.plot_as_training:
-                        plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
-                        plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
-                                                      nh1=context['nh1'], save=True)
-                        plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'),
-                                                start=sample_duration_train[-3],
-                                                end=sample_duration_train[-1] - context['sample_pause_train'],
-                                                layers=['vis', 'hid', 'out'],
-                                                res=context['nv'] - context['nc'],
-                                                number_of_classes=context['nc'],
-                                                save=True,
-                                                input_att_window=context['input_window_position'])
-
                     res, snr = run_classify(context, labels_test, sample_duration_test)
                     acc_hist.append([i + 1, res])
                     snr_hist.append([i + 1, snr])

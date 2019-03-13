@@ -31,7 +31,7 @@ def parse_args():
 
 args = parse_args()
 
-def generate_video_from_file(input_path, output_path, aedat_version='aedat3', remove_tmp_pics=True, event_amount=1000, attention_window=True, center_crop=False):
+def generate_video_from_file(input_path, output_path, aedat_version='aedat3', remove_tmp_pics=True, event_amount=10000, attention_window=True, center_crop=False):
     extension = input_path.split('/')[-1].split('.')[1]
     file_name = input_path.split('/')[-1].split('.')[0]
     tmp_folder_pics = os.path.join('/tmp/scripts/plots/{}'.format(file_name))
