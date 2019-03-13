@@ -10,6 +10,8 @@ import utils.file_io as fio
 import json
 import argparse
 import datetime
+import time
+
 
 
 def parse_args():
@@ -22,12 +24,11 @@ def parse_args():
     parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
     parser.add_argument('--eta_decay', type=float, default=.98, help='learning rate decay factor')
     parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
-    parser.add_argument('--output', type=str, default='dvs_gesture_split',
-                        help='folder name for the results')
-    parser.add_argument('--plot_as_training', type=bool, default=False,
-                        help='plot spiketrains and weights while learning')
-    parser.add_argument('--gen_data', action='store_true', default=False,
-                        help='generate train and test data')
+    parser.add_argument('--output', type=str, default='dvs_gesture_split', help='folder name for the results')
+    parser.add_argument('--plot_as_training', type=bool, default=False, help='plot spiketrains and weights while learning')
+    parser.add_argument('--gen_data', action='store_true', default=False, help='generate train and test data')
+    parser.add_argument('--test_first', action='store_true', default=False, help='run one test before starting to learn')
+
     parser.add_argument('--resume', type=str, default='', help='Resume training from directory')
     return parser.parse_args()
 
@@ -163,7 +164,7 @@ context = {'ncores': args.n_cores,
            'recurrent': False,
            'polarity': 'dual',
            'delay': 0.0,
-           'attention_event_amount': 1000,
+           'attention_event_amount': 10000,
            'attention_window_size': n_rows,
            'input_window_position': False,
            'only_input_position': False,
@@ -193,9 +194,7 @@ def update_output_weights(output_weights):
 
 if __name__ == '__main__':
     try:
-
-        last_perf = (0.0, 0.0)
-        init = args.gen_data
+        last_perf = (-1.0, -1.0)
         new_test_data = args.gen_data
         save = True
         et.mksavedir()
@@ -209,6 +208,8 @@ if __name__ == '__main__':
         spkcnt = [None for i in range(context['n_epochs'])]
 
         if args.resume is not '':
+            if args.resume[-1] is not '/':
+                args.resume += '/'
             print 'Loading previous run from {}'.format(args.resume)
             et.globaldata.directory = args.resume
             M = et.load('M.pkl')
@@ -218,11 +219,12 @@ if __name__ == '__main__':
             snr_hist = et.load('snr_hist.pkl')
             bestM = et.load('bestM.pkl')
             start_epoch = acc_hist[-1][0] + 1
-
-            print('old_c: {}'.format(old_context))
-            print('context before: {}'.format(context))
             context.update(old_context)
-            print('context after: {}'.format(context))
+
+            # take n_cores and test interval from current args
+            context['ncores'] = args.n_cores
+            context['test_every'] = args.testinterval
+            print('Restored context: {}'.format(context))
             elib.write_allparameters_rbp(M, context)
 
 
@@ -293,8 +295,14 @@ if __name__ == '__main__':
         weight_stats = update_weight_stats(weight_stats)
         output_weights = update_output_weights(output_weights)
 
+        if args.test_first:
+            print('Early testing for epoch {}'.format(start_epoch))
+            res, snr = run_classify(context, labels_test, sample_duration_test)
+
         for i in xrange(start_epoch, n_epochs):
             print('Epoch {} / {}'.format(i, n_epochs))
+
+            start_execution_create_ras = time.time()
             sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train,
                                                                              context['directory'], "train",
                                                                              randomize=True,
@@ -316,10 +324,14 @@ if __name__ == '__main__':
                                                                              recurrent=context['recurrent'],
                                                                              label_frequency=context['label_frequency']
                                                                              )
+            print("---- create_ras_from_aedat: execution took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
+
             context['simtime_train'] = sample_duration_train[-1]
             print(context['simtime_train'])
             print('New train data: {} samples'.format(n_samples_train))
+            start_execution_learn = time.time()
             ret, run_cmd = run_learn(context)
+            print("---- run_learn: execution took {} minutes ----".format(int((time.time() - start_execution_learn)//60)))
 
             context['eta'] = context['eta'] * context['eta_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
@@ -327,8 +339,10 @@ if __name__ == '__main__':
 
             output_weights = update_output_weights(output_weights)
             weight_stats = update_weight_stats(weight_stats)
+
+            print("---- learning epoch iteration took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
             if test_every > 0:
-                if i % test_every == test_every - 1:
+                if i % test_every == test_every:
                     if args.plot_as_training:
                         plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
                         plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
@@ -360,9 +374,8 @@ if __name__ == '__main__':
                         et.save(snr_hist, 'snr_hist.pkl')
                         et.annotate('res', text=str(acc_hist))
                         et.save(context, 'context.pkl')
-
                         elib.textannotate('last_res', text=str(acc_hist))
-                        elib.textannotate('last_dir', text=d)
+                        elib.textannotate('last_dir', text=et.globaldata.directory)
 
 
 
@@ -386,7 +399,7 @@ if __name__ == '__main__':
             et.save(bestM, 'bestM.pkl')
 
             elib.textannotate('last_res', text=str(acc_hist))
-            elib.textannotate('last_dir', text=d)
+            elib.textannotate('last_dir', text=et.globaldata.directory)
     except:
         type, value, tb = sys.exc_info()
         traceback.print_exc()
