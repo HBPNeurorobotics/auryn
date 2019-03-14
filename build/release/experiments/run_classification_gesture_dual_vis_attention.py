@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
             print("---- learning epoch iteration took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
             if test_every > 0:
-                if i % test_every == test_every:
+                if i % test_every == 0:
                     res, snr = run_classify(context, labels_test, sample_duration_test)
                     acc_hist.append([i + 1, res])
                     snr_hist.append([i + 1, snr])
