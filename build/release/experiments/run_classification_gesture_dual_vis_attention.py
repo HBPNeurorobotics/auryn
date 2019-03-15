@@ -49,7 +49,7 @@ def run_classify(context, labels_test, sample_duration_test):
         --simtime {simtime_test} \
         --record_full false \
         --record_rasters false \
-        --record_rates false \
+        --record_rates true \
         --dir  outputs/{directory}/test/ \
         --fvh  inputs/{directory}/train/{fvh} \
         --fho  inputs/{directory}/train/{fho} \

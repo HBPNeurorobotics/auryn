@@ -1081,12 +1081,12 @@ def get_rate_prediction(split_raw):
             predicted_labels.append(-1)
     return predicted_labels
 
-
-def get_first_prediction(split_raw):
+def get_first_prediction(split_raw, wait_before_spike=50e-3):
     prediction_labels = []
     for elem in split_raw:
-        if elem.size > 0:
-            prediction_labels.append(int(elem[:, 0][0]))
+        elem_after_wait = elem[elem[:, 1] > wait_before_spike]
+        if elem_after_wait.size > 0:
+            prediction_labels.append(int(elem_after_wait[:, 0][0]))
     return prediction_labels
 
 

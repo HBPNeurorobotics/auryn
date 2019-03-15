@@ -23,8 +23,8 @@ def parse_args():
                         help='Plot attention window'),
     parser.add_argument('--center_crop', action='store_true', default=False,
                         help='crop center window'),
-    parser.add_argument('--remove_pics', type=bool, default=True,
-                        help='remove pics from tmp folder')
+    parser.add_argument('--keep_pics', action='store_true', default=False,
+                        help='don\'t remove pics from tmp folder')
 
 
     return parser.parse_args()
@@ -66,7 +66,7 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
         df = pd.DataFrame({'ts': timestamps, 'x': xaddr, 'y': yaddr, 'p': pol})
         df.ts = df.ts * 1e-6
 
-    framerate = 30
+    framerate = 60
     dt = 1. / framerate
     max_ts_in_s = df.ts.max()
     # compute centroids and add them to the event df
@@ -116,6 +116,6 @@ def restore_ts_order(timestamps):
 
 generate_video_from_file(args.input,
                          args.output,
-                         remove_tmp_pics=args.remove_pics,
+                         remove_tmp_pics=not args.keep_pics,
                          attention_window=args.attention_window,
                          center_crop=args.center_crop)
