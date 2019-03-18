@@ -22,7 +22,7 @@ def parse_args():
     parser.add_argument('--testinterval', type=int, default=5, help='how epochs to run before testing')
     parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
     parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
-    parser.add_argument('--eta_decay', type=float, default=.98, help='learning rate decay factor')
+    parser.add_argument('--eta_decay', type=float, default=.9, help='learning rate decay factor')
     parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
     parser.add_argument('--output', type=str, default='dvs_gesture_split', help='folder name for the results')
     parser.add_argument('--plot_as_training', action='store_true', default=False, help='plot spiketrains and weights while learning')
@@ -358,8 +358,8 @@ if __name__ == '__main__':
             if test_every > 0:
                 if i % test_every == 0:
                     res, snr = run_classify(context, labels_test, sample_duration_test)
-                    acc_hist.append([i + 1, res])
-                    snr_hist.append([i + 1, snr])
+                    acc_hist.append([i, res])
+                    snr_hist.append([i, snr])
                     if res > last_perf:
                         last_perf = res
                         bestM = elib.read_allparamters_dual(context)
