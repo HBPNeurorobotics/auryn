@@ -21,8 +21,12 @@ def parse_args():
                         help='path to output'),
     parser.add_argument('--attention_window', action='store_true', default=False,
                         help='Plot attention window'),
+    parser.add_argument('--frame_duration', type=float, default=1./60.,
+                        help='duration (in second) of integration to generate a frame from events'),
     parser.add_argument('--center_crop', action='store_true', default=False,
                         help='crop center window'),
+    parser.add_argument('--disable_legend', action='store_true', default=False,
+                        help='do not plot ON/OFF legend'),
     parser.add_argument('--keep_pics', action='store_true', default=False,
                         help='don\'t remove pics from tmp folder')
 
@@ -66,8 +70,9 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
         df = pd.DataFrame({'ts': timestamps, 'x': xaddr, 'y': yaddr, 'p': pol})
         df.ts = df.ts * 1e-6
 
-    framerate = 60
-    dt = 1. / framerate
+    dt = args.frame_duration
+    framerate = np.ceil(1. / dt).astype(int)
+
     max_ts_in_s = df.ts.max()
     # compute centroids and add them to the event df
     centroids = df.loc[:, ['x', 'y']].rolling(window=event_amount, min_periods=1).median().astype(int)
@@ -96,7 +101,8 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
         plotter.plot_2d_events_from_df(current_df, centroid=current_centroid,
                                        plot_title='Events from {:0.2f}s to {:.2f}s'.format(start, end),
                                        image_title='{}/events{:05d}'.format(file_name, i),
-                                       hist_shape = hist_shape)
+                                       hist_shape = hist_shape,
+                                       legend=not args.disable_legend)
 
     # animate the images with ffmpeg
     os.system('ffmpeg -y -r {framerate} -f image2 -s 1280x720 -i {tmp_folder}/events%05d.png -vcodec libx264 -crf 15 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p {output}'.format(

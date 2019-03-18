@@ -73,7 +73,7 @@ class Plotter:
         self.plot_heat_map(bucket, 'Spatial event distribution - label 1'.format(start, end), save=True,
                            image_title=image_title, dynamic_v=True)
 
-    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title='', hist_shape = (128,128)):
+    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title='', hist_shape = (128,128), legend=True):
         bucket = np.zeros(hist_shape, dtype=int)
         for event in df.itertuples():
             if event.p == 1:
@@ -84,7 +84,7 @@ class Plotter:
         bucket[bucket < 0] = -1
         self.plot_heat_map(bucket, plot_title, save=True,
                            image_title=image_title, show_cbar=False, vmin=-1, vmax=1,
-                           centroid=centroid)
+                           centroid=centroid, legend=legend)
 
 
     def plot_2d_events_from_aedat(self, path, start=0, end=sys.maxint, image_title='', version='aedat3', attention_window=False, event_amount=1000):
@@ -117,7 +117,7 @@ class Plotter:
                 return timestamps
 
     def plot_heat_map(self, bucket, plot_title, save=False, image_title='', show_cbar=True, vmin=0, vmax=10,
-                      dynamic_v=False, centroid=None, attention_window_size=32):
+                      dynamic_v=False, centroid=None, attention_window_size=32, legend=True):
         plt.clf()
         fig = plt.figure(frameon=False, figsize=(5,5))
         ax = plt.Axes(fig, [0., 0., 1., 1.])
@@ -134,7 +134,8 @@ class Plotter:
         else:
             custom_lines = [Line2D([0], [0], color=plt.cm.viridis(1.), lw=0, marker='s'),
                             Line2D([0], [0], color=plt.cm.viridis(-1.), lw=0, marker='s')]
-            plt.legend(custom_lines, ['ON', 'OFF'], handlelength=0.5, borderpad=0.5, framealpha=0.5, numpoints=1)
+            if legend:
+                plt.legend(custom_lines, ['ON', 'OFF'], handlelength=0.5, borderpad=0.5, framealpha=0.5, numpoints=1)
 
         # fig.tight_layout()
         if centroid is not None:
