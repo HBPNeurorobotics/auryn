@@ -59,7 +59,7 @@ def run_classify(context, labels_test, sample_duration_test):
         --fve  inputs/{directory}/train/{fve} \
         --feh  inputs/{directory}/train/{feh} \
         --ip_v inputs/{directory}/test/{ip_v}\
-        --prob_syn 1.\
+        --prob_syn {prob_syn}\
         --nvis {nv} \
         --nhid {nh} \
         --nout {nc} \
@@ -164,7 +164,7 @@ context = {'ncores': args.n_cores,
            'recurrent': False,
            'polarity': 'dual',
            'delay': 0.0,
-           'attention_event_amount': 10000,
+           'attention_event_amount': 1000,
            'attention_window_size': n_rows,
            'input_window_position': False,
            'only_input_position': False,
