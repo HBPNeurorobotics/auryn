@@ -20,14 +20,15 @@ def parse_args():
     parser.add_argument('--n_hidden', type=int, default=400, help='number of hidden units')
     parser.add_argument('--n_cores', type=int, default=4, help='number of cores')
     parser.add_argument('--testinterval', type=int, default=5, help='how epochs to run before testing')
+    parser.add_argument('--attention_size', type=int, default=64, help='size of attention window')
     parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
     parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
-    parser.add_argument('--eta_decay', type=float, default=.9, help='learning rate decay factor')
     parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
     parser.add_argument('--output', type=str, default='dvs_gesture_split', help='folder name for the results')
     parser.add_argument('--plot_as_training', action='store_true', default=False, help='plot spiketrains and weights while learning')
     parser.add_argument('--gen_data', action='store_true', default=False, help='generate train and test data')
     parser.add_argument('--test_first', action='store_true', default=False, help='run one test before starting to learn')
+
 
     parser.add_argument('--resume', type=str, default='', help='Resume training from directory')
     return parser.parse_args()
@@ -114,17 +115,15 @@ def run_learn(context):
     ret = os.system(run_cmd)
     return ret, run_cmd
 
-n_rows = 32
-
 context = {'ncores': args.n_cores,
            'directory': 'dvs_gesture_split',
-           'nv': (n_rows * n_rows) * 2 + 12,  # Include nc
+           'nv': (args.attention_size * args.attention_size) * 2 + 12,  # Include nc
            'nh': args.n_hidden,
            'nh2': args.n_hidden // 2,
            'nh1': args.n_hidden // 2,
            'nc': 12,
            'eta': args.eta,
-           'eta_decay': args.eta_decay,
+           'eta_linear_decay': args.eta / float(args.n_epochs),
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -165,7 +164,7 @@ context = {'ncores': args.n_cores,
            'polarity': 'dual',
            'delay': 0.0,
            'attention_event_amount': 1000,
-           'attention_window_size': n_rows,
+           'attention_window_size': args.attention_size,
            'input_window_position': False,
            'only_input_position': False,
            'new_pos_weight': .1,
@@ -333,7 +332,7 @@ if __name__ == '__main__':
             ret, run_cmd = run_learn(context)
             print("---- run_learn: execution took {} minutes ----".format(int((time.time() - start_execution_learn)//60)))
 
-            context['eta'] = context['eta'] * context['eta_decay']
+            context['eta'] = context['eta'] - context['eta_linear_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
             M = elib.process_parameters_rbp_dual(context)
 
