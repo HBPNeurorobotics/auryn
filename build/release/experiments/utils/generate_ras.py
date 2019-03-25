@@ -6,15 +6,16 @@ import pandas as pd
 import os
 import glob
 import erbp_plotter as plotter
+from attention_mechanism import attention
 import scipy.stats as stats
 
 from tqdm import tqdm
 
 
 def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='', randomize=False, pause_duration=0,
-                          event_polarity='on', cache=False, max_neuron_id=32 * 32, delay=0.0, attention_window_time=0.0,
-                          attention_window_size=32, attention_mechanism='median', input_window_position=False,
-                          attention_window_position_std=10, only_input_position=False, new_pos_weight=0.1,
+                          event_polarity='on', cache=False, max_neuron_id=32 * 32, delay=0.0, attention_event_amount=1000,
+                          attention_window_size=32, input_window_position=False,
+                          only_input_position=False, new_pos_weight=0.1,
                           recurrent=False, no_noise=False, label_frequency=2500):
     filename = "input"
     os.system('rm inputs/{}/{}/{}.ras'.format(exp_directory, test_or_train, filename))
@@ -36,29 +37,27 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
         version = 'aedat3'
 
     if n_samples > len(sample_names):
-        print('Number of total files has to be bigger than number of epoch samples.')
-        return
+        raise ValueError(
+            'Desired number of test samples ({}) is smaller than total amount of samples ({})'.
+            format(n_samples, len(sample_names)))
     else:
         sample_names = [sample_names[i] for i in sample_ids]
 
     current_timestamp = 0.
     sample_duration_list = []
-    group_by = 2
 
     print('\nloading {} data:'.format(test_or_train))
     with pd.HDFStore(
-            'data/{exp_dir}/{test_or_train}_{max_neuron_id}_{event_pol}_{delay}delay_{attention}attention{attention_window_size}{input_window_position}_std{attention_window_position_std}_posonly{only_input_position}_{new_pos_weight}new_{attention_mechanism}_rec{recurrent}.h5'.format(
+            'data/{exp_dir}/{test_or_train}_{max_neuron_id}_{event_pol}_{delay}delay_{attention_event_amount}attention{attention_window_size}{input_window_position}_posonly{only_input_position}_{new_pos_weight}new_rec{recurrent}.h5'.format(
                 exp_dir=exp_directory,
                 test_or_train=test_or_train,
                 event_pol=event_polarity,
                 delay=delay,
-                attention=attention_window_time,
+                attention_event_amount=attention_event_amount,
                 attention_window_size=attention_window_size,
                 input_window_position=input_window_position,
-                attention_window_position_std=attention_window_position_std,
                 only_input_position=only_input_position,
                 new_pos_weight=new_pos_weight,
-                attention_mechanism=attention_mechanism,
                 recurrent=recurrent,
                 max_neuron_id=max_neuron_id)) as store:
         for i, sample_id in enumerate(tqdm(sample_ids)):
@@ -70,13 +69,16 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
             else:
                 timestamps, xaddr, yaddr, pol, min_ts = load_events_from_aedat(
                     sample_names[i], version)
-                if attention_window_time == 0.0:
+
+                if attention_event_amount == 0:
+                    # we resize the event stream to the same size the attention window would be
+                    group_by = 128 // attention_window_size
                     neuron_id = get_grouped_n_id(xaddr, yaddr, group_by)
                     df = pd.DataFrame({'ts': timestamps, 'n_id': neuron_id, 'pol': pol})
                 else:
-                    df = get_attention_df(timestamps, xaddr, yaddr, pol, attention_window_time, attention_window_size,
-                                          input_window_position, max_neuron_id, label_frequency, attention_mechanism,
-                                          attention_window_position_std, only_input_position, new_pos_weight, labels[i])
+                    df = pd.DataFrame({'ts': timestamps, 'x': xaddr, 'y': yaddr, 'pol': pol})
+                    df = attention.get_attention_df_rolling(df, attention_event_amount, attention_window_size)
+
                 if not only_input_position:
                     if event_polarity == 'on':
                         df = df[df.pol == 1]
@@ -96,7 +98,7 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
                     df = df.append(df_copy)
                 if cache:
                     store[key] = df
-            if attention_window_time != 0.0 and input_window_position:
+            if attention_event_amount != 0 and input_window_position:
                 att_win_position_neurons = 2 * 128
             else:
                 att_win_position_neurons = 0
@@ -243,9 +245,9 @@ def shift_for_attention(event_slice, median_x, median_y):
 
 
 def get_grouped_n_id(xaddr, yaddr, group_by):
-    xaddr = np.array(xaddr) // group_by  # group to 32
-    yaddr = np.array(yaddr) // group_by  # group to 32
-    return (yaddr * (128 / group_by)) + xaddr  # group neuron_id to 32x32
+    xaddr = np.array(xaddr) // group_by
+    yaddr = np.array(yaddr) // group_by
+    return (yaddr * (128 / group_by)) + xaddr
 
 
 def get_label_spikes_df(label, max_neuron_id, first_ts, end_ts, frequency):

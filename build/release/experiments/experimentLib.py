@@ -26,7 +26,7 @@ def pandas_loadtxt_2d(f, delimiter=' ', *args, **kwargs):
         out = pd.read_csv(f, *args, delimiter=delimiter, **kwargs).values[:, [0, 1]]
         return out
     except pd.io.common.EmptyDataError, e:
-        print("pandas: Empty Data")
+        print("pandas: file {} contains no data".format(f))
         return np.zeros([0, 2])
 
 
@@ -772,11 +772,14 @@ def sum_csr(a):
 # directory = 'outputs/mnist/train/'
 def collect_wmat(directory, con_id):
     from scipy.sparse import csr_matrix
-    filenames = '{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory)  # Uses wierd file naming by auryn
+    filenames = os.path.join(directory, 'coba.*..{0}.*.wmat'.format(con_id))  # Uses wierd file naming by auryn
     from scipy.io import mmread
     a = []
     for f in glob.glob(filenames):
         a.append(mmread(f))
+
+    if len(a) == 0:
+        raise ValueError('There was no weights to load')
 
     if numpy_version_largerthan('1.7.0'):
         return csr_matrix(sum(a))
@@ -790,7 +793,7 @@ def collect_wmat(directory, con_id):
 
 def collect_wmat_auto(directory, con_id):
     from scipy.sparse import csr_matrix
-    filenames = '{directory}/coba.*..{0}.*.wmat'.format(con_id, directory=directory)  # Uses wierd file naming by auryn
+    filenames = os.path.join(directory, 'coba.*..{0}.*.wmat'.format(con_id))  # Uses wierd file naming by auryn
     from scipy.io import mmread
     a = []
     ggf = glob.glob(filenames)
@@ -799,6 +802,9 @@ def collect_wmat_auto(directory, con_id):
     name = extract_wmat_name(ggf[0])
     for f in ggf:
         a.append(mmread(f))
+
+    if len(a) == 0:
+        raise ValueError('There was no weights to load')
 
     if numpy_version_largerthan('1.7.0'):
         return csr_matrix(sum(a)), name
@@ -1075,12 +1081,12 @@ def get_rate_prediction(split_raw):
             predicted_labels.append(-1)
     return predicted_labels
 
-
-def get_first_prediction(split_raw):
+def get_first_prediction(split_raw, wait_before_spike=200e-3):
     prediction_labels = []
     for elem in split_raw:
-        if elem.size > 0:
-            prediction_labels.append(int(elem[:, 0][0]))
+        elem_after_wait = elem[elem[:, 1] > wait_before_spike]
+        if elem_after_wait.size > 0:
+            prediction_labels.append(int(elem_after_wait[:, 0][0]))
     return prediction_labels
 
 

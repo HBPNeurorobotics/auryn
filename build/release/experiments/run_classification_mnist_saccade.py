@@ -5,10 +5,10 @@ import experimentTools as et
 import traceback
 import pdb
 import numpy as np
-import utils.erbp_plotter as plotter
+from erbp_utils.erbp_plotter import Plotter
 import utils.file_io as fio
 import json
-
+import datetime
 
 # "-m yappi" to profile
 
@@ -47,7 +47,7 @@ def run_classify(context, labels_test, sample_duration_test):
                             layers=['out'], res=context['nv'] - context['nc'], save=True)
     rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, ouput_spikes_per_label, ouput_spikes_per_label_norm, snr, snr_per_label = elib.process_test_classification(
         context, sample_duration_test, labels_test)
-    print(ouput_spikes_per_label)
+    print('output spikes per label:\n{}'.format(ouput_spikes_per_label))
     plotter.plot_output_spike_count(ouput_spikes_per_label, 'Output spike count per label', 0, save=True,
                                     image_title='out_spk')
     plotter.plot_output_spike_count(ouput_spikes_per_label_norm, 'Normalized ouput spike count per label', 0, save=True,
@@ -91,7 +91,7 @@ def run_learn(context):
     return ret, run_cmd
 
 
-context = {'ncores': 4,
+context = {'ncores': 8,
            'directory': 'dvs_mnist_saccade',
            'nv': (32 * 32) + 10,  # Include nc
            'nh': 400,
@@ -99,7 +99,7 @@ context = {'ncores': 4,
            'nh1': 200,
            'nc': 10,
            'eta': 1e-4,
-           'eta_decay': 0.9,
+           'eta_decay': 0.99,
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -124,7 +124,7 @@ context = {'ncores': 4,
            'max_samples_test': 1000,
            'n_samples_train': 1500,  # 1500
            'n_samples_test': 1000,  # 1000
-           'n_epochs': 30,  # 60
+           'n_epochs': 1000,  # 60
            'n_loop': 1,
            'prob_syn': 0.65,
            'init_mean_bias_v': -.1,
@@ -135,21 +135,20 @@ context = {'ncores': 4,
            'input_scale': .5,
            'mean_weight': 0.0,  # useless
            'std_weight': 0.01,
-           'test_every': 1,
+           'test_every': 20,
            'recurrent': False,
            'polarity': 'both',
            'delay': 0.0,
-           'attention_window_time': 0.0,
-           'attention_window_size': 64,
-           'attention_mechanism': 'median',
-           'attention_window_position_std': 3,
+           'attention_event_amount': 1000,
+           'attention_window_size': 32,
            'input_window_position': False,
            'only_input_position': False,
            'new_pos_weight': 0.1,
            'label_frequency': 200}
 
 context['eta_orig'] = context['eta']
-
+plotter = Plotter(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               '{date:%Y-%m-%d_%H:%M}_dvs_mnist_saccade'.format(date=datetime.datetime.now())))
 
 def update_weight_stats(weight_stats):
     stat_dict = (
@@ -175,7 +174,7 @@ if __name__ == '__main__':
         init = True # initialize weights?
         new_test_data = True # generate new test data ras files?
         test = True # test before first training epoch?
-        save = False # save results to result folder?
+        save = True # save results to result folder?
 
 
         # folder = '066__21-07-2018'
@@ -220,27 +219,23 @@ if __name__ == '__main__':
                                                                            event_polarity=context['polarity'],
                                                                            max_neuron_id=max_neuron_id,
                                                                            delay=context['delay'],
-                                                                           attention_window_time=context[
-                                                                               'attention_window_time'],
+                                                                           attention_event_amount=context[
+                                                                               'attention_event_amount'],
                                                                            attention_window_size=context[
                                                                                'attention_window_size'],
                                                                            input_window_position=context[
                                                                                'input_window_position'],
-                                                                           attention_window_position_std=context[
-                                                                               'attention_window_position_std'],
                                                                            only_input_position=context[
                                                                                'only_input_position'],
                                                                            new_pos_weight=context['new_pos_weight'],
                                                                            recurrent=context['recurrent'],
-                                                                           attention_mechanism=context[
-                                                                               'attention_mechanism'],
                                                                            label_frequency=context['label_frequency'])
             context['simtime_test'] = sample_duration_test[-1]
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'w+') as simtime_file:
                 json.dump(
                     {'context': context, 'labels_test': labels_test, 'sample_duration_test': sample_duration_test},
                     simtime_file)
-                print('New test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
+                print('New test data: {} samples'.format(n_samples_test))
         else:
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'r') as simtime_file:
                 old_test_sim = json.load(simtime_file)
@@ -253,7 +248,7 @@ if __name__ == '__main__':
                 sample_duration_test = old_test_sim['sample_duration_test']
                 context['simtime_test'] = sample_duration_test[-1]
                 print(context['simtime_test'])
-                print('Old test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
+                print('Old test data: {} samples'.format(n_samples_test))
 
         # eta_decay = context['eta'] / n_epochs
         acc_hist = []
@@ -269,59 +264,6 @@ if __name__ == '__main__':
 
         weight_stats = update_weight_stats(weight_stats)
         output_weights = update_output_weights(output_weights)
-        for i in xrange(n_epochs):
-            sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train, context['directory'],
-                                                                             "train", randomize=True,
-                                                                             pause_duration=context[
-                                                                                 'sample_pause_train'], cache=True,
-                                                                             event_polarity=context['polarity'],
-                                                                             max_neuron_id=max_neuron_id,
-                                                                             delay=context['delay'],
-                                                                             attention_window_time=context[
-                                                                                 'attention_window_time'],
-                                                                             attention_window_size=context[
-                                                                                 'attention_window_size'],
-                                                                             input_window_position=context[
-                                                                                 'input_window_position'],
-                                                                             attention_window_position_std=context[
-                                                                                 'attention_window_position_std'],
-                                                                             only_input_position=context[
-                                                                                 'only_input_position'],
-                                                                             new_pos_weight=context['new_pos_weight'],
-                                                                             recurrent=context['recurrent'],
-                                                                             attention_mechanism=context[
-                                                                                 'attention_mechanism'],
-                                                                             label_frequency=context['label_frequency'])
-            context['simtime_train'] = sample_duration_train[-1]
-            print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
-            ret, run_cmd = run_learn(context)
-
-            plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'), start=0,
-                                    end=sample_duration_train[2] - context['sample_pause_train'],
-                                    layers=['vis', 'hid', 'out'],
-                                    res=context['nv'] - context['nc'], save=True)
-
-            context['eta'] = context['eta'] * context['eta_decay']
-            spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
-            M = elib.process_parameters_rbp_dual(context)
-
-            plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
-            plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
-                                          nh1=context['nh1'], save=True)
-            output_weights = update_output_weights(output_weights)
-            weight_stats = update_weight_stats(weight_stats)
-            if test_every > 0:
-                if i % test_every == test_every - 1:
-                    res = run_classify(context, labels_test, sample_duration_test)
-                    acc_hist.append([i + 1, res])
-                    if res > last_perf:
-                        last_perf = res
-                        bestM = elib.read_allparamters_dual(context)
-
-        plotter.plot_weight_stats(weight_stats, save=True)
-        plotter.plot_output_weights_over_time(output_weights, save=True)
-        if len(acc_hist) > 0:
-            plotter.plot_accuracy_rate_first(acc_hist, save=True)
 
         if save:
             M = elib.read_allparamters_dual(context)
@@ -331,6 +273,72 @@ if __name__ == '__main__':
             et.save(context, 'context.pkl')
             et.save(sys.argv, 'sysargv.pkl')
             et.save(M, 'M.pkl')
+
+        for i in xrange(n_epochs):
+            sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train, context['directory'],
+                                                                             "train", randomize=True,
+                                                                             pause_duration=context[
+                                                                                 'sample_pause_train'], cache=True,
+                                                                             event_polarity=context['polarity'],
+                                                                             max_neuron_id=max_neuron_id,
+                                                                             delay=context['delay'],
+                                                                             attention_event_amount=context[
+                                                                                 'attention_event_amount'],
+                                                                             attention_window_size=context[
+                                                                                 'attention_window_size'],
+                                                                             input_window_position=context[
+                                                                                 'input_window_position'],
+                                                                             only_input_position=context[
+                                                                                 'only_input_position'],
+                                                                             new_pos_weight=context['new_pos_weight'],
+                                                                             recurrent=context['recurrent'],
+                                                                             label_frequency=context['label_frequency'])
+            context['simtime_train'] = sample_duration_train[-1]
+            print('New train data: {} samples'.format(n_samples_train))
+            print('Epoch {} / {}'.format(i, n_epochs))
+            ret, run_cmd = run_learn(context)
+
+            context['eta'] = context['eta'] * context['eta_decay']
+            spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
+            M = elib.process_parameters_rbp_dual(context)
+
+            output_weights = update_output_weights(output_weights)
+            weight_stats = update_weight_stats(weight_stats)
+            if test_every > 0:
+                if i % test_every == test_every - 1:
+                    res = run_classify(context, labels_test, sample_duration_test)
+                    print('Accuracy test: {}'.format(res))
+                    acc_hist.append([i + 1, res])
+
+                    plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'), start=0,
+                                            end=sample_duration_train[2] - context['sample_pause_train'],
+                                            layers=['vis', 'hid', 'out'],
+                                            res=context['nv'] - context['nc'], save=True)
+                    plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
+                    plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
+                                                  nh1=context['nh1'], save=True)
+                    plotter.plot_accuracy_rate_first(acc_hist[:i+1], save=True)
+
+                    if res > last_perf:
+                        last_perf = res
+                        bestM = elib.read_allparamters_dual(context)
+                    if save:
+                        et.save(spkcnt, 'spkcnt.pkl')
+                        et.save(bestM, 'bestM.pkl')
+                        et.save(acc_hist, 'acc_hist.pkl')
+                        et.annotate('res', text=str(acc_hist))
+
+                        elib.textannotate('last_res', text=str(acc_hist))
+                        elib.textannotate('last_dir', text=d)
+
+
+
+        plotter.plot_weight_stats(weight_stats, save=True)
+        plotter.plot_output_weights_over_time(output_weights, save=True)
+        if len(acc_hist) > 0:
+            plotter.plot_accuracy_rate_first(acc_hist, save=True)
+
+        if save:
             et.save(spkcnt, 'spkcnt.pkl')
             et.save(bestM, 'bestM.pkl')
             et.save(acc_hist, 'acc_hist.pkl')
@@ -338,6 +346,7 @@ if __name__ == '__main__':
 
             elib.textannotate('last_res', text=str(acc_hist))
             elib.textannotate('last_dir', text=d)
+
     except:
         type, value, tb = sys.exc_info()
         traceback.print_exc()

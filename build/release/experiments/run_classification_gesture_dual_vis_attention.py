@@ -5,10 +5,38 @@ import experimentTools as et
 import traceback
 import pdb
 import numpy as np
-import utils.erbp_plotter as plotter
+from utils.erbp_plotter import Plotter
 import utils.file_io as fio
 import json
+import argparse
+import datetime
+import time
 
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='eRBP DvsGesture')
+    parser.add_argument('--n_epochs', type=int, default=100, help='number of epochs to train')
+    parser.add_argument('--n_hidden', type=int, default=400, help='number of hidden units')
+    parser.add_argument('--n_cores', type=int, default=4, help='number of cores')
+    parser.add_argument('--testinterval', type=int, default=5, help='how epochs to run before testing')
+    parser.add_argument('--input_size', type=int, default=64, help='size of the input (attention window or resize)')
+    parser.add_argument('--attention_event_amount', type=int, default=1000, help='number of past events to compute attention window (set to 0 to disable attention window)')
+    parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
+    parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
+    parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
+    parser.add_argument('--output', type=str, default='dvs_gesture_split', help='folder name for the results')
+    parser.add_argument('--plot_as_training', action='store_true', default=False, help='plot spiketrains and weights while learning')
+    parser.add_argument('--gen_data', action='store_true', default=False, help='generate train and test data')
+    parser.add_argument('--test_first', action='store_true', default=False, help='run one test before starting to learn')
+
+
+    parser.add_argument('--resume', type=str, default='', help='Resume training from directory')
+    return parser.parse_args()
+
+args = parse_args()
+plotter = Plotter(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               '{date:%Y-%m-%d_%H:%M}_dvs_gesture'.format(date=datetime.datetime.now())))
 
 # "-m yappi" to profile
 
@@ -43,9 +71,6 @@ def run_classify(context, labels_test, sample_duration_test):
     if ret == 0:
         print('ran')
 
-    plotter.plot_ras_spikes('outputs/{}/test/coba.*.{}.ras'.format(context['directory'], '{}'), start=0, end=15,
-                            layers=['out'], res=context['nv'] - context['nc'], number_of_classes=context['nc'],
-                            save=True, input_att_window=context['input_window_position'])
     # first 5 labels: 7,2,1,0,4
     rate_class, first_class, rate_confusion_data_frame, first_confusion_data_frame, output_spikes_per_label, ouput_spikes_per_label_norm, snr, snr_per_label = elib.process_test_classification(
         context, sample_duration_test, labels_test)
@@ -91,16 +116,15 @@ def run_learn(context):
     ret = os.system(run_cmd)
     return ret, run_cmd
 
-
-context = {'ncores': 4,
+context = {'ncores': args.n_cores,
            'directory': 'dvs_gesture_split',
-           'nv': (64 * 64) * 2 + 12 + 2*128,  # Include nc
-           'nh': 400,
-           'nh2': 200,
-           'nh1': 200,
+           'nv': (args.input_size * args.input_size) * 2 + 12,  # Include nc
+           'nh': args.n_hidden,
+           'nh2': args.n_hidden // 2,
+           'nh1': args.n_hidden // 2,
            'nc': 12,
-           'eta': 6e-4,
-           'eta_decay': 0.9,
+           'eta': args.eta,
+           'eta_linear_decay': args.eta / float(args.n_epochs),
            'ncpl': 1,
            'gate_low': -.6,
            'gate_high': .6,
@@ -120,14 +144,14 @@ context = {'ncores': 4,
            'binary': False,
            'sample_pause_train': 0.4,
            'sample_pause_test': 0.4,
-           'sigma': 0e-3,
+           'sigma': 0.0,
            'max_samples_train': 1176,  # useless
            'max_samples_test': 288,  # useless
            'n_samples_train': 1176,  # 1176
            'n_samples_test': 288,  # 288
-           'n_epochs': 30,  # 10
+           'n_epochs': args.n_epochs,  # 10
            'n_loop': 1,
-           'prob_syn': 0.65,
+           'prob_syn': args.prob_syn,
            'init_mean_bias_v': -.1,
            'init_mean_bias_h': -.1,
            'init_std_bias_v': 1e-32,
@@ -136,20 +160,18 @@ context = {'ncores': 4,
            'input_scale': .5,
            'mean_weight': 0.0,  # useless
            'std_weight': 7.,
-           'test_every': 1,
+           'test_every': args.testinterval,
            'recurrent': False,
            'polarity': 'dual',
            'delay': 0.0,
-           'attention_window_time': 0.02,
-           'attention_window_size': 64,
-           'attention_mechanism': 'median',
-           'attention_window_position_std': 5,
-           'input_window_position': True,
+           'attention_event_amount': args.attention_event_amount,
+           'attention_window_size': args.input_size,
+           'input_window_position': False,
            'only_input_position': False,
-           'new_pos_weight': 1.,
+           'new_pos_weight': .1,
            'label_frequency': 500}
-
 context['eta_orig'] = context['eta']
+
 
 
 def update_weight_stats(weight_stats):
@@ -172,29 +194,39 @@ def update_output_weights(output_weights):
 
 if __name__ == '__main__':
     try:
-        last_perf = (0.0, 0.0)
-        init = True
-        new_test_data = True
-        test = True
+        last_perf = (-1.0, -1.0)
+        new_test_data = args.gen_data
         save = True
+        et.mksavedir()
+        et.globaldata.context = context
 
-        folder = '075__04-08-2018'
-        directory = 'Results/{}/'.format(folder)
-        directory = None
-        if directory is not None:
-            print 'Loading previous run...'
-            et.globaldata.directory = directory
+        start_epoch = 0
+        acc_hist = []
+        snr_hist = []
+        weight_stats = {}
+        output_weights = []
+        spkcnt = [None for i in range(context['n_epochs'])]
+
+        if args.resume is not '':
+            if args.resume[-1] is not '/':
+                args.resume += '/'
+            print 'Loading previous run from {}'.format(args.resume)
+            et.globaldata.directory = args.resume
             M = et.load('M.pkl')
             old_context = et.load('context.pkl')
-            print('old_c: {}'.format(old_context))
-            print('context before: {}'.format(context))
+            acc_hist = et.load('acc_hist.pkl')
+            spkcnt = et.load('spkcnt.pkl')
+            snr_hist = et.load('snr_hist.pkl')
+            bestM = et.load('bestM.pkl')
+            start_epoch = acc_hist[-1][0] + 1
             context.update(old_context)
-            print('context after: {}'.format(context))
 
+            # take n_cores and test interval from current args
+            context['ncores'] = args.n_cores
+            context['test_every'] = args.testinterval
+            print('Restored context: {}'.format(context))
             elib.write_allparameters_rbp(M, context)
-            context['test_every'] = 20
-            context['n_epochs'] = 0
-            context['n_samples_train'] = 1
+
 
         max_samples_train = context['max_samples_train']
         max_samples_test = context['max_samples_test']
@@ -209,7 +241,8 @@ if __name__ == '__main__':
         if context['input_window_position']:
             max_neuron_id -= 128 * 2
 
-        if init:
+        if args.resume is '':
+            print('Cleaning previous weights')
             os.system('rm -rf inputs/{directory}/train/'.format(**context))
             os.system('mkdir -p inputs/{directory}/train/'.format(**context))
             elib.create_rbp_init(base_filename='inputs/{directory}/train/fwmat'.format(**context), **context)
@@ -217,6 +250,7 @@ if __name__ == '__main__':
         if new_test_data:
             os.system('rm -rf inputs/{directory}/test/'.format(**context))
             os.system('mkdir -p inputs/{directory}/test/'.format(**context))
+
             sample_duration_test, labels_test = gras.create_ras_from_aedat(n_samples_test,
                                                                            context['directory'], "test",
                                                                            randomize=False,
@@ -225,20 +259,16 @@ if __name__ == '__main__':
                                                                            cache=True,
                                                                            max_neuron_id=max_neuron_id,
                                                                            delay=context['delay'],
-                                                                           attention_window_time=context[
-                                                                               'attention_window_time'],
+                                                                           attention_event_amount=context[
+                                                                               'attention_event_amount'],
                                                                            attention_window_size=context[
                                                                                'attention_window_size'],
                                                                            input_window_position=context[
                                                                                'input_window_position'],
-                                                                           attention_window_position_std=context[
-                                                                               'attention_window_position_std'],
                                                                            only_input_position=context[
                                                                                'only_input_position'],
                                                                            new_pos_weight=context['new_pos_weight'],
                                                                            recurrent=context['recurrent'],
-                                                                           attention_mechanism=context[
-                                                                               'attention_mechanism'],
                                                                            label_frequency=context['label_frequency'])
             context['simtime_test'] = sample_duration_test[-1]
             print(context['simtime_test'])
@@ -246,7 +276,6 @@ if __name__ == '__main__':
                 json.dump(
                     {'context': context, 'labels_test': labels_test, 'sample_duration_test': sample_duration_test},
                     simtime_file)
-                print('New test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
         else:
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'r') as simtime_file:
                 old_test_sim = json.load(simtime_file)
@@ -259,24 +288,21 @@ if __name__ == '__main__':
                 sample_duration_test = old_test_sim['sample_duration_test']
                 context['simtime_test'] = sample_duration_test[-1]
                 print(context['simtime_test'])
-                print('Old test data : {}\n{}\n{}'.format(n_samples_test, labels_test, sample_duration_test))
-
-        acc_hist = []
-        snr_hist = []
-        weight_stats = {}
-        output_weights = []
-        spkcnt = [None for i in range(n_epochs)]
-
-        if test:
-            res, snr = run_classify(context, labels_test, sample_duration_test)
-            acc_hist.append([0, res])
-            snr_hist.append([0, snr])
+        print('Number of test samples: {}'.format(n_samples_test))
 
         # plotter.plot_2d_input_ras('{}/{}'.format(context['directory'], 'test'), 32, 0, 3)
 
         weight_stats = update_weight_stats(weight_stats)
         output_weights = update_output_weights(output_weights)
-        for i in xrange(n_epochs):
+
+        if args.test_first:
+            print('Early testing for epoch {}'.format(start_epoch))
+            res, snr = run_classify(context, labels_test, sample_duration_test)
+
+        for i in xrange(start_epoch, n_epochs):
+            print('Epoch {} / {}'.format(i, n_epochs))
+
+            start_execution_create_ras = time.time()
             sample_duration_train, labels_train = gras.create_ras_from_aedat(n_samples_train,
                                                                              context['directory'], "train",
                                                                              randomize=True,
@@ -286,53 +312,73 @@ if __name__ == '__main__':
                                                                              cache=True,
                                                                              max_neuron_id=max_neuron_id,
                                                                              delay=context['delay'],
-                                                                             attention_window_time=context[
-                                                                                 'attention_window_time'],
+                                                                             attention_event_amount=context[
+                                                                                 'attention_event_amount'],
                                                                              attention_window_size=context[
                                                                                  'attention_window_size'],
                                                                              input_window_position=context[
                                                                                  'input_window_position'],
-                                                                             attention_window_position_std=context[
-                                                                                 'attention_window_position_std'],
                                                                              only_input_position=context[
                                                                                  'only_input_position'],
                                                                              new_pos_weight=context['new_pos_weight'],
                                                                              recurrent=context['recurrent'],
-                                                                             attention_mechanism=context[
-                                                                                 'attention_mechanism'],
                                                                              label_frequency=context['label_frequency']
                                                                              )
+            print("---- create_ras_from_aedat: execution took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
+
             context['simtime_train'] = sample_duration_train[-1]
             print(context['simtime_train'])
-            print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
+            print('New train data: {} samples'.format(n_samples_train))
+            start_execution_learn = time.time()
             ret, run_cmd = run_learn(context)
+            print("---- run_learn: execution took {} minutes ----".format(int((time.time() - start_execution_learn)//60)))
 
-            plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'),
-                                    start=sample_duration_train[-3],
-                                    end=sample_duration_train[-1] - context['sample_pause_train'],
-                                    layers=['vis', 'hid', 'out'],
-                                    res=context['nv'] - context['nc'],
-                                    number_of_classes=context['nc'],
-                                    save=True,
-                                    input_att_window=context['input_window_position'])
-
-            context['eta'] = context['eta'] * context['eta_decay']
+            context['eta'] = context['eta'] - context['eta_linear_decay']
             spkcnt[i] = elib.get_spike_count('outputs/{directory}/train/'.format(**context))
             M = elib.process_parameters_rbp_dual(context)
 
-            plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
-            plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
-                                          nh1=context['nh1'], save=True)
             output_weights = update_output_weights(output_weights)
             weight_stats = update_weight_stats(weight_stats)
+
+            if args.plot_as_training:
+                plotter.plot_weight_matrix('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'), save=True)
+                plotter.plot_weight_histogram('inputs/{}/train/fwmat_{}.mtx'.format(context['directory'], '{}'),
+                                              nh1=context['nh1'], save=True)
+                plotter.plot_ras_spikes('outputs/{}/train/coba.*.{}.ras'.format(context['directory'], '{}'),
+                                        start=sample_duration_train[-3],
+                                        end=sample_duration_train[-1] - context['sample_pause_train'],
+                                        layers=['vis', 'hid', 'out'],
+                                        res=context['nv'] - context['nc'],
+                                        number_of_classes=context['nc'],
+                                        save=True,
+                                        input_att_window=context['input_window_position'])
+
+
+            print("---- learning epoch iteration took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
             if test_every > 0:
-                if i % test_every == test_every - 1:
+                if i % test_every == 0:
                     res, snr = run_classify(context, labels_test, sample_duration_test)
-                    acc_hist.append([i + 1, res])
-                    snr_hist.append([i + 1, snr])
+                    acc_hist.append([i, res])
+                    snr_hist.append([i, snr])
                     if res > last_perf:
                         last_perf = res
                         bestM = elib.read_allparamters_dual(context)
+                    if save:
+                        et.globaldata.context = context
+                        et.save()
+                        et.save(sys.argv, 'sysargv.pkl')
+                        et.save(M, 'M.pkl')
+                        et.save(bestM, 'bestM.pkl')
+                        et.save(args, 'args.pkl')
+                        et.save(spkcnt, 'spkcnt.pkl')
+                        et.save(acc_hist, 'acc_hist.pkl')
+                        et.save(snr_hist, 'snr_hist.pkl')
+                        et.annotate('res', text=str(acc_hist))
+                        et.save(context, 'context.pkl')
+                        elib.textannotate('last_res', text=str(acc_hist))
+                        elib.textannotate('last_dir', text=et.globaldata.directory)
+
+
 
         plotter.plot_weight_stats(weight_stats, save=True)
         plotter.plot_output_weights_over_time(output_weights, save=True)
@@ -342,8 +388,6 @@ if __name__ == '__main__':
             print(snr_hist)
 
         if save:
-            M = elib.read_allparamters_dual(context)
-            d = et.mksavedir()
             et.globaldata.context = context
             et.save()
             et.save(context, 'context.pkl')
@@ -356,7 +400,7 @@ if __name__ == '__main__':
             et.save(bestM, 'bestM.pkl')
 
             elib.textannotate('last_res', text=str(acc_hist))
-            elib.textannotate('last_dir', text=d)
+            elib.textannotate('last_dir', text=et.globaldata.directory)
     except:
         type, value, tb = sys.exc_info()
         traceback.print_exc()
