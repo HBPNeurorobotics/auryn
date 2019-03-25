@@ -20,7 +20,8 @@ def parse_args():
     parser.add_argument('--n_hidden', type=int, default=400, help='number of hidden units')
     parser.add_argument('--n_cores', type=int, default=4, help='number of cores')
     parser.add_argument('--testinterval', type=int, default=5, help='how epochs to run before testing')
-    parser.add_argument('--attention_size', type=int, default=64, help='size of attention window')
+    parser.add_argument('--input_size', type=int, default=64, help='size of the input (attention window or resize)')
+    parser.add_argument('--attention_event_amount', type=int, default=1000, help='number of past events to compute attention window (set to 0 to disable attention window)')
     parser.add_argument('--no_save', type=bool, default=False, help='disables saving into Results directory')
     parser.add_argument('--eta', type=float, default=6e-4, help='learning rate')
     parser.add_argument('--prob_syn', type=float, default=0.65, help='probability passing a spike')
@@ -117,7 +118,7 @@ def run_learn(context):
 
 context = {'ncores': args.n_cores,
            'directory': 'dvs_gesture_split',
-           'nv': (args.attention_size * args.attention_size) * 2 + 12,  # Include nc
+           'nv': (args.input_size * args.input_size) * 2 + 12,  # Include nc
            'nh': args.n_hidden,
            'nh2': args.n_hidden // 2,
            'nh1': args.n_hidden // 2,
@@ -163,8 +164,8 @@ context = {'ncores': args.n_cores,
            'recurrent': False,
            'polarity': 'dual',
            'delay': 0.0,
-           'attention_event_amount': 1000,
-           'attention_window_size': args.attention_size,
+           'attention_event_amount': args.attention_event_amount,
+           'attention_window_size': args.input_size,
            'input_window_position': False,
            'only_input_position': False,
            'new_pos_weight': .1,

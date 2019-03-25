@@ -45,7 +45,6 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
 
     current_timestamp = 0.
     sample_duration_list = []
-    group_by = 2
 
     print('\nloading {} data:'.format(test_or_train))
     with pd.HDFStore(
@@ -72,6 +71,8 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
                     sample_names[i], version)
 
                 if attention_event_amount == 0:
+                    # we resize the event stream to the same size the attention window would be
+                    group_by = 128 // attention_window_size
                     neuron_id = get_grouped_n_id(xaddr, yaddr, group_by)
                     df = pd.DataFrame({'ts': timestamps, 'n_id': neuron_id, 'pol': pol})
                 else:
@@ -244,9 +245,9 @@ def shift_for_attention(event_slice, median_x, median_y):
 
 
 def get_grouped_n_id(xaddr, yaddr, group_by):
-    xaddr = np.array(xaddr) // group_by  # group to 32
-    yaddr = np.array(yaddr) // group_by  # group to 32
-    return (yaddr * (128 / group_by)) + xaddr  # group neuron_id to 32x32
+    xaddr = np.array(xaddr) // group_by
+    yaddr = np.array(yaddr) // group_by
+    return (yaddr * (128 / group_by)) + xaddr
 
 
 def get_label_spikes_df(label, max_neuron_id, first_ts, end_ts, frequency):
