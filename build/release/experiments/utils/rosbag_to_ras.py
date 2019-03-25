@@ -12,6 +12,7 @@ import glob
 from tqdm import tqdm
 import rospy
 import time
+import pdb
 
 
 def event_to_dict(ev):
@@ -20,24 +21,52 @@ def event_to_dict(ev):
         'x': ev.x,
         'y': ev.y,
         'p': ev.polarity,
-        'ts': ev.ts.to_sec(),
+        'ts': ev.ts.to_sec()
     }
     return ret
 
 
-def rosbag_to_df(filename, topics):
-    allEvents = []
+def state_to_dict(state):
+    ret = {
+        'ts': state.header.stamp.to_sec(),
+        'jointA': state.position[0],
+        'jointB': state.position[1],
+        'jointC': state.position[2]
+    }
+    return ret
+
+
+def rosbag_to_df(filename, topics, joint_state_topic="/head/joint_states"):
+    all_events = []
+    joint_states = []
     with rosbag.Bag(filename, 'r') as bag:
+        bag_topics = bag.get_type_and_topic_info()[1].keys()
         if bag.get_message_count(topics) <= 0:
-            bag_topics = bag.get_type_and_topic_info()[1].keys()
             raise ValueError('Rosbag {} topic {} is empty.\nPossible topics: {}'
                              .format(filename, topics, bag_topics))
         for topics, msg, t in bag.read_messages(topics=topics):
-            allEvents += map(event_to_dict, msg.events)
-    df = pd.DataFrame(allEvents)
+            all_events += map(event_to_dict, msg.events)
+        if joint_state_topic in bag_topics:
+            for topics, msg, t in bag.read_messages(topics=[joint_state_topic]):
+                joint_states.append(state_to_dict(msg))
+
+    df = pd.DataFrame(all_events)
+    if joint_states:
+        joint_state_df = pd.DataFrame(joint_states)
+        microsaccade_ts = 0
+        for i in range(len(joint_state_df.index)):
+            if different_joint_state(joint_state_df.loc[i], joint_state_df.loc[i + 1]):
+                microsaccade_ts = joint_state_df.loc[i].ts + 0.05
+                break
+        df = df.loc[df.ts > microsaccade_ts, :]
     df.ts -= df.ts.min()
+    df = df.loc[df.ts < 0.7, :]
 
     return df
+
+
+def different_joint_state(js_1, js_2):
+    return js_1.jointA != js_2.jointA or js_1.jointB != js_2.jointB or js_1.jointC != js_2.jointC
 
 
 def get_grouped_n_id(xaddr, yaddr, orig_res, new_res):
@@ -111,7 +140,7 @@ def calc_max_neuron_id(config):
 
 
 def create_single_rosbag_ras(exp_dir, path_to_pkg, rosbag_path):
-    with open('{path_to_pkg}/scripts/utils/preprocessing_config.yaml'.format(path_to_pkg=path_to_pkg)) as config_file:
+    with open('{path_to_pkg}/config/preprocessing_config.yaml'.format(path_to_pkg=path_to_pkg)) as config_file:
         config = yaml.safe_load(config_file)
 
     topics = config['topics']
@@ -137,7 +166,7 @@ def create_single_rosbag_ras(exp_dir, path_to_pkg, rosbag_path):
 
 
 def create_batch_ras(path_to_pkg, exp_dir, data_dir, test_or_train, nc, cache=True):
-    config = yaml.safe_load(open("{}/scripts/utils/preprocessing_config.yaml".format(path_to_pkg)))
+    config = yaml.safe_load(open("{}/config/preprocessing_config.yaml".format(path_to_pkg)))
     topics = config['topics']
     dvs_res = config['dvs_res']
     att_win_size = config['att_win_size']
@@ -219,7 +248,10 @@ def get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res, event_p
             max_id_per_cam = att_win_size * att_win_size
         elif crop:
             bag_events_df = attention.take_window_events(down_sample_res,
-                                                         pd.DataFrame({'x': [dvs_res / 2 + down_sample_res / 2 - 35]*bag_events_df.shape[0], 'y': [dvs_res / 2 + down_sample_res / 2 - 5]*bag_events_df.shape[0]}),
+                                                         pd.DataFrame({'x': [dvs_res / 2 + down_sample_res / 2 - 35] *
+                                                                            bag_events_df.shape[0],
+                                                                       'y': [dvs_res / 2 + down_sample_res / 2 - 5] *
+                                                                            bag_events_df.shape[0]}),
                                                          bag_events_df)
             max_id_per_cam = down_sample_res * down_sample_res
         else:
