@@ -144,8 +144,8 @@ class Plotter:
         plt.legend(classes)
         plt.tight_layout()
         # plt.title("Aggregated output spikes")
-        plt.ylabel("Time in seconds")
-        plt.xlabel("Number of spikes")
+        plt.xlabel("Time in seconds")
+        plt.ylabel("Number of spikes")
         if save:
             if not output_path:
                 out_path = self.path_to_plots
@@ -173,7 +173,6 @@ class Plotter:
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
             data_df, seek = fio.ras_to_df(path, start, end)
-            print(counter)
             ax1 = plt.subplot(num_plots, 1, counter)
             if counter == 1:
                 pass
