@@ -73,7 +73,8 @@ class Plotter:
         self.plot_heat_map(bucket, 'Spatial event distribution - label 1'.format(start, end), save=True,
                            image_title=image_title, dynamic_v=True)
 
-    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title='', hist_shape = (128,128), legend=True):
+    def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title='', hist_shape=(128, 128),
+                               legend=True):
         bucket = np.zeros(hist_shape, dtype=int)
         for event in df.itertuples():
             if event.p == 1:
@@ -86,8 +87,8 @@ class Plotter:
                            image_title=image_title, show_cbar=False, vmin=-1, vmax=1,
                            centroid=centroid, legend=legend)
 
-
-    def plot_2d_events_from_aedat(self, path, start=0, end=sys.maxint, image_title='', version='aedat3', attention_window=False, event_amount=1000):
+    def plot_2d_events_from_aedat(self, path, start=0, end=sys.maxint, image_title='', version='aedat3',
+                                  attention_window=False, event_amount=1000):
         if version == 'aedat3':
             timestamps, xaddr, yaddr, pol = jhandler.load_aedat31(path, debug=0)
         else:
@@ -105,10 +106,9 @@ class Plotter:
         if attention_window:
             centroid = df.loc[:, ['x', 'y']].rolling(window=event_amount, min_periods=1).median().astype(int).mean()
         else:
-            centroid=None
-        plot_title='Events from {:0.2f}s to {:.2f}s'.format(start, end)
+            centroid = None
+        plot_title = 'Events from {:0.2f}s to {:.2f}s'.format(start, end)
         self.plot_2d_events_from_df(df, centroid, plot_title, image_title)
-
 
     def restore_ts_order(self, timestamps):
         for i in range(len(timestamps) - 1):
@@ -119,7 +119,7 @@ class Plotter:
     def plot_heat_map(self, bucket, plot_title, save=False, image_title='', show_cbar=True, vmin=0, vmax=10,
                       dynamic_v=False, centroid=None, attention_window_size=32, legend=True):
         plt.clf()
-        fig = plt.figure(frameon=False, figsize=(5,5))
+        fig = plt.figure(frameon=False, figsize=(5, 5))
         ax = plt.Axes(fig, [0., 0., 1., 1.])
         ax.set_axis_off()
         fig.add_axes(ax)
@@ -139,10 +139,10 @@ class Plotter:
 
         # fig.tight_layout()
         if centroid is not None:
-            rect = patches.Rectangle((int(centroid.centroid_x - attention_window_size/2.),
-                                      int(centroid.centroid_y - attention_window_size/2.)),
+            rect = patches.Rectangle((int(centroid.centroid_x - attention_window_size / 2.),
+                                      int(centroid.centroid_y - attention_window_size / 2.)),
                                      attention_window_size, attention_window_size,
-                                     linewidth=2, edgecolor='r',facecolor='none')
+                                     linewidth=2, edgecolor='r', facecolor='none')
             ax.add_patch(rect)
 
         if save:
@@ -174,8 +174,8 @@ class Plotter:
         plt.legend(classes)
         plt.tight_layout()
         # plt.title("Aggregated output spikes")
-        plt.ylabel("Time in seconds")
-        plt.xlabel("Number of spikes")
+        plt.xlabel("Time in seconds")
+        plt.ylabel("Number of spikes")
         if save:
             if not output_path:
                 out_path = self.path_to_plots
@@ -203,7 +203,6 @@ class Plotter:
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
             data_df, seek = fio.ras_to_df(path, start, end)
-            # print(counter)
             ax1 = plt.subplot(num_plots, 1, counter)
             if counter == 1:
                 pass
@@ -372,7 +371,8 @@ class Plotter:
             plt.show()
         plt.close('all')
 
-    def plot_weight_convolution(self, path, nh1, nc, connections=['vh', 'hh', 'ho'], save=False):
+    def plot_weight_convolution(self, path, nh1, nc, connections=['vh', 'hh', 'ho'], save=False,
+            cbar_tick_size = 5000, labels=[]):
         weight_matrices = {}
         for connection in connections:
             weight_matrix = fio.mtx_file_to_matrix(
@@ -386,13 +386,15 @@ class Plotter:
             weight_matrices[connection] = weight_matrix
         conv_matrix = self.calc_conv(connections, weight_matrices)  # .reshape(32,32,12)
         # conv_matrix = np.array(map(lambda x: np.argmax(x), conv_matrix)).reshape(32,32)
+        os.makedirs('{}/convolution'.format(self.path_to_plots))
         for i in range(nc):
             plt.clf()
             conv_label = np.array([item[i] for item in conv_matrix]).reshape(32, 32)
-
             fig, ax = plt.subplots()
-            ax.set_title('Weight convolution for label {}'.format(i))
-            cbar_tick_size = 5000
+            if labels:
+                ax.set_title('Weight convolution for label {}'.format(labels[i]))
+            else:
+                ax.set_title('Weight convolution for label {}'.format(i))
             conv_plot = ax.imshow(conv_label, cmap='PiYG', interpolation='nearest', vmin=-cbar_tick_size,
                                   vmax=cbar_tick_size)
             cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
