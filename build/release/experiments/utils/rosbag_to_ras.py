@@ -96,7 +96,7 @@ def silentremove(filename):
 
 
 def get_rosbag_names(path_to_pkg, data_dir):
-    return sorted(glob.glob('{}/scripts/{}/*/*.bag'.format(path_to_pkg, data_dir)))
+    return sorted(glob.glob('{}/scripts/{}/data_sets/*/*.bag'.format(path_to_pkg, data_dir)))
 
 
 def get_exp_data(config, test_or_train, number_of_classes=3):
@@ -140,18 +140,9 @@ def calc_max_neuron_id(config):
 
 
 def create_single_rosbag_ras(exp_dir, path_to_pkg, rosbag_path):
-    with open('{path_to_pkg}/config/preprocessing_config.yaml'.format(path_to_pkg=path_to_pkg)) as config_file:
-        config = yaml.safe_load(config_file)
-
-    topics = config['topics']
-    dvs_res = config['dvs_res']
-    att_win_size = config['att_win_size']
-    use_attention_window = config['use_attention_window']
-    use_online_median = config['use_online_median']
-    online_median_event_amount = config['online_median_event_amount']
-    att_time_frame = config['att_time_frame']
-    down_sample_res = config['down_sample_res']
-    event_polarity = config['event_polarity']
+    config = get_config(path_to_pkg)
+    att_time_frame, att_win_size, down_sample_res, dvs_res, event_polarity, label_freq, online_median_event_amount, pause_duration_test, pause_duration_train, topics, use_attention_window, use_online_median = read_config(
+        config)
 
     ras_path = '{path_to_pkg}/scripts/inputs/{exp_dir}/predict/input.ras'.format(path_to_pkg=path_to_pkg,
                                                                                  exp_dir=exp_dir)
@@ -166,21 +157,13 @@ def create_single_rosbag_ras(exp_dir, path_to_pkg, rosbag_path):
 
 
 def create_batch_ras(path_to_pkg, exp_dir, data_dir, test_or_train, nc, cache=True):
-    config = yaml.safe_load(open("{}/config/preprocessing_config.yaml".format(path_to_pkg)))
-    topics = config['topics']
-    dvs_res = config['dvs_res']
-    att_win_size = config['att_win_size']
-    use_attention_window = config['use_attention_window']
-    use_online_median = config['use_online_median']
-    online_median_event_amount = config['online_median_event_amount']
-    att_time_frame = config['att_time_frame']
-    down_sample_res = config['down_sample_res']
+    config = get_config(path_to_pkg)
+    att_time_frame, att_win_size, down_sample_res, dvs_res, event_polarity, label_freq, online_median_event_amount, pause_duration_test, pause_duration_train, topics, use_attention_window, use_online_median = read_config(
+        config)
     if test_or_train == 'train':
-        pause_duration = config['sample_pause_train']
+        pause_duration = pause_duration_train
     else:
-        pause_duration = config['sample_pause_test']
-    event_polarity = config['event_polarity']
-    label_freq = config['label_freq']
+        pause_duration = pause_duration_test
     max_neuron_id = 0
 
     sample_names = get_rosbag_names(path_to_pkg, data_dir)
@@ -228,6 +211,28 @@ def create_batch_ras(path_to_pkg, exp_dir, data_dir, test_or_train, nc, cache=Tr
             current_timestamp = input_df.ts.values[-1] + pause_duration
             sample_duration_list.append(current_timestamp)
     return sample_duration_list, labels
+
+
+def read_config(config):
+    topics = config['topics']
+    dvs_res = config['dvs_res']
+    att_win_size = config['att_win_size']
+    use_attention_window = config['use_attention_window']
+    use_online_median = config['use_online_median']
+    online_median_event_amount = config['online_median_event_amount']
+    att_time_frame = config['att_time_frame']
+    down_sample_res = config['down_sample_res']
+    event_polarity = config['event_polarity']
+    label_freq = config['label_freq']
+    pause_duration_train = config['sample_pause_train']
+    pause_duration_test = config['sample_pause_test']
+    return att_time_frame, att_win_size, down_sample_res, dvs_res, event_polarity, label_freq, online_median_event_amount, pause_duration_test, pause_duration_train, topics, use_attention_window, use_online_median
+
+
+def get_config(path_to_pkg):
+    with open('{path_to_pkg}/config/preprocessing_config.yaml'.format(path_to_pkg=path_to_pkg)) as config_file:
+        config = yaml.safe_load(config_file)
+    return config
 
 
 def get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res, event_polarity, path_to_rosbag,
