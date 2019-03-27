@@ -96,7 +96,7 @@ def silentremove(filename):
 
 
 def get_rosbag_names(path_to_pkg, data_dir):
-    return sorted(glob.glob('{}/scripts/{}/data_sets/*/*.bag'.format(path_to_pkg, data_dir)))
+    return sorted(glob.glob('{}/scripts/data/{}/*/*.bag'.format(path_to_pkg, data_dir)))
 
 
 def get_exp_data(config, test_or_train, number_of_classes=3):
