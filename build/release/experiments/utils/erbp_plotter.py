@@ -12,9 +12,12 @@ import os
 
 
 class Plotter:
-    def __init__(self, path_to_pkg):
+    def __init__(self, path_to_pkg, path_to_plots=""):
         self.path_to_pkg = path_to_pkg
-        self.path_to_plots = '{}/scripts/plots'.format(self.path_to_pkg)
+        if path_to_plots:
+            self.path_to_plots = path_to_plots
+        else:
+            self.path_to_plots = '{}/scripts/plots'.format(self.path_to_pkg)
         try:
             os.makedirs(self.path_to_plots)
         except OSError as e:
@@ -372,7 +375,7 @@ class Plotter:
         plt.close('all')
 
     def plot_weight_convolution(self, path, nh1, nc, connections=['vh', 'hh', 'ho'], save=False,
-            cbar_tick_size = 5000, labels=[]):
+                                cbar_tick_size=5000, labels=[]):
         weight_matrices = {}
         for connection in connections:
             weight_matrix = fio.mtx_file_to_matrix(
