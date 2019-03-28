@@ -117,7 +117,7 @@ class Plotter:
                 return timestamps
 
     def plot_heat_map(self, bucket, plot_title, save=False, image_title='', show_cbar=True, vmin=0, vmax=10,
-                      dynamic_v=False, centroid=None, attention_window_size=32, legend=True):
+                      dynamic_v=False, centroid=None, attention_window_size=64, legend=True):
         plt.clf()
         fig = plt.figure(frameon=False, figsize=(5, 5))
         ax = plt.Axes(fig, [0., 0., 1., 1.])
@@ -132,10 +132,10 @@ class Plotter:
         if show_cbar:
             cbar = fig.colorbar(cax)
         else:
-            custom_lines = [Line2D([0], [0], color=plt.cm.viridis(1.), lw=0, marker='s'),
-                            Line2D([0], [0], color=plt.cm.viridis(-1.), lw=0, marker='s')]
+            custom_lines = [Line2D([0], [0], color=plt.cm.viridis(1.), lw=0, marker='s', markersize=20),
+                            Line2D([0], [0], color=plt.cm.viridis(-1.), lw=0, marker='s', markersize=20)]
             if legend:
-                plt.legend(custom_lines, ['ON', 'OFF'], handlelength=0.5, borderpad=0.5, framealpha=0.5, numpoints=1)
+                plt.legend(custom_lines, ['ON', 'OFF'], handlelength=1, borderpad=0.5, framealpha=0.5, numpoints=1, prop={'size': 20})
 
         # fig.tight_layout()
         if centroid is not None:
@@ -144,9 +144,11 @@ class Plotter:
                                      attention_window_size, attention_window_size,
                                      linewidth=2, edgecolor='r', facecolor='none')
             ax.add_patch(rect)
+        ax.autoscale(False)
+        extent = ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
 
         if save:
-            plt.savefig('{}/{}.png'.format(self.path_to_plots, image_title), dpi=300, bbox_inches='tight')
+            plt.savefig('{}/{}.png'.format(self.path_to_plots, image_title), dpi=300, bbox_inches=extent)
         else:
             plt.show()
         plt.close('all')

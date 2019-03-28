@@ -89,10 +89,11 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
         if end > max(df.ts):
             end = max(df.ts)
         print(start, end)
-        current_df = df[(df.ts >= start) & (df.ts <= end)]
+        current_df = df[(df.ts <= end)]
+        current_df = current_df[-1000:]
         current_centroid = None
         if attention_window:
-            current_centroid = current_df[['centroid_x', 'centroid_y']].mean()
+            current_centroid = current_df.iloc[-1][['centroid_x', 'centroid_y']]
         if center_crop:
             centers = current_df.copy(deep=True)
             centers.x =  128 / 2 + hist_shape[0] / 2 - 35
