@@ -172,16 +172,20 @@ class Plotter:
             plt.show()
         plt.close('all')
 
-    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path=''):
+    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', xmax=.6, ax=None):
         data_df, seek = fio.ras_to_df(path, start, end)
+        if ax == None:
+            fig, ax = plt.subplots(figsize=(5, 3.1))
+
         for i, c in enumerate(classes):
             class_df = data_df.loc[data_df.n_id == i]
-            plt.plot([0] + list(class_df.ts), [0] + list(class_df['n_id'].expanding().count()), label=c)
-        plt.legend(classes)
-        plt.tight_layout()
+            ax.plot([0] + list(class_df.ts), [0] + list(class_df['n_id'].expanding().count()), label=c)
+        ax.legend(classes)
         # plt.title("Aggregated output spikes")
-        plt.xlabel("Time in seconds")
-        plt.ylabel("Number of spikes")
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Output spikes")
+        ax.set_xlim([0, xmax])
+        # plt.tight_layout()
         if save:
             if not output_path:
                 out_path = self.path_to_plots
@@ -192,11 +196,12 @@ class Plotter:
             plt.savefig('{}/{}'.format(out_path, name), dpi=300)
         else:
             plt.show()
-        plt.clf()
+
+
 
     def plot_ras_spikes(self, pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
-                        save=False, xmax=0.6, nh1=200, input_size=32*32*2, input_att_window=False, att_win_input_size=128 * 2, output_path='',
-                        plot_label=True):
+                        save=False, xmax=0.6, show_xlabel=True, nh1=200, input_size=32*32*2, input_att_window=False, att_win_input_size=128 * 2, output_path='',
+                        plot_label=True, gs=None):
         title = 'Spike times'
         counter = 0
         num_plots = len(layers)
@@ -208,12 +213,14 @@ class Plotter:
         if 'hid' in layers:
             num_plots += 1
 
-        fig = plt.figure(figsize=(5, 5))
         height_ratios =  np.ones(num_plots)
         height_ratios[0] = 1.61
-        gs = gridspec.GridSpec(num_plots, 1, height_ratios=height_ratios)
+        if gs == None:
+            fig = plt.figure(figsize=(5, 3.1))
+            gs = gridspec.GridSpec(num_plots, 1, height_ratios=height_ratios)
 
         latest_spike = xmax
+        markersize = 2.
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
             data_df, seek = fio.ras_to_df(path, start, end)
@@ -233,7 +240,7 @@ class Plotter:
                         ax1.plot((start, end), (i, i), 'r--', linewidth=0.1, alpha=1)
                     ax1.plot(label_df.ts.values, label_df.n_id.values - res, linestyle='None', marker=u'|',
                              color=[0, 0, 1, 1],
-                             markersize=1, alpha=0.1)
+                             markersize=markersize, alpha=0.1)
                     ax1.set_ylabel("Label")
                     ax1.xaxis.set_major_locator(plt.NullLocator())
                     counter += 1
@@ -256,9 +263,10 @@ class Plotter:
                     ax1.set_xlim(0, latest_spike)
 
                 ax1 = plt.subplot(gs[counter])
+
                 # ax1.get_yaxis().set_label_coords(-0.1, 0.5)
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.4)
+                         markersize=markersize, alpha=0.4)
                 ax1.set_ylabel("Input")
                 ax1.xaxis.set_major_locator(plt.NullLocator())
                 ax1.axhline(input_size/2, color='black', alpha=.5, linestyle='--')
@@ -269,18 +277,21 @@ class Plotter:
             elif layer == 'hid':
                 hidden_one = data_df[(0 <= data_df.n_id) & (data_df.n_id < nh1)]
                 ax1.plot(hidden_one.ts.values, hidden_one.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.4)
+                         markersize=markersize, alpha=0.4)
                 ax1.set_ylabel("Hidden 1")
                 ax1.set_ylim([0, nh1])
+                ax1.set_yticks([0, nh1/2, nh1])
                 ax1.xaxis.set_major_locator(plt.NullLocator())
 
                 counter += 1
                 ax1 = plt.subplot(gs[counter])
+
                 hidden_two = data_df[(nh1 <= data_df.n_id) & (data_df.n_id < (nh1*2))]
                 ax1.plot(hidden_two.ts.values, hidden_two.n_id.values - nh1, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.4)
+                         markersize=markersize, alpha=0.4)
                 ax1.set_ylabel("Hidden 2")
                 ax1.set_ylim([0, nh1])
+                ax1.set_yticks([0, nh1/2, nh1])
                 ax1.set_xlim(0, latest_spike)
 
                 if i != len(layers) - 1:
@@ -289,7 +300,7 @@ class Plotter:
                 for i in xrange(number_of_classes):
                     ax1.axhline(i, color='black', alpha=.5, linestyle='--')
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.2)
+                         markersize=markersize, alpha=0.2)
                 ax1.set_ylabel("Output")
                 ax1.set_xlim(0, latest_spike)
 
@@ -297,11 +308,11 @@ class Plotter:
                 for i in xrange(number_of_classes):
                     ax1.axhline(i, color='black', alpha=.5, linestyle='--')
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.2)
+                         markersize=markersize, alpha=0.2)
                 path = pathinput.format(layer.replace('1', '2'))
                 data_df, seek = fio.ras_to_df(path, start, end)
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[1, 0, 0, 1],
-                         markersize=1, alpha=0.2)
+                         markersize=markersize, alpha=0.2)
                 ax1.set_ylabel("Error")
                 ax1.xaxis.set_major_locator(plt.NullLocator())
                 ax1.set_xlim(0, latest_spike)
@@ -310,10 +321,12 @@ class Plotter:
             counter += 1
             x1, x2, y1, y2 = ax1.axis()
             ax1.axis((start, end, y1, y2))
+        if show_xlabel:
+            ax1.set_xlabel("Time [s]")
+        else:
+            ax1.set_xticks([])
 
-        ax1.set_xlabel("Time [s]")
         plt.xlim(0, latest_spike)
-        plt.tight_layout()
 
         if save:
             if not output_path:
@@ -325,7 +338,6 @@ class Plotter:
             plt.savefig('{}/{}'.format(out_path, name), dpi=300)
         else:
             plt.show()
-        plt.clf()
 
     def plot_weight_stats(self, stats, save=False):
         num_subplots = len(stats.keys())
