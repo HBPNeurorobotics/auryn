@@ -377,13 +377,15 @@ class Plotter:
         plt.close('all')
 
     def plot_weight_convolution(self, path, nh1, nc, connections=['vh', 'hh', 'ho'], save=False,
-                                cbar_tick_size=5000, labels=[]):
+                                cbar_tick_size=5000, labels=[], show_cbar=False, show_title=False):
         weight_matrices = {}
         for connection in connections:
             weight_matrix = fio.mtx_file_to_matrix(
                 "{path}/fwmat_{connection}.mtx".format(path=path, connection=connection))
             if connection == 'vh':
+                # project to ON or OFF events
                 weight_matrix = weight_matrix[:32 * 32]
+                # weight_matrix = weight_matrix[32 * 32:]
             elif connection == 'hh':
                 weight_matrix = weight_matrix[:, nh1:]
             elif connection == 'ho':
@@ -391,21 +393,31 @@ class Plotter:
             weight_matrices[connection] = weight_matrix
         conv_matrix = self.calc_conv(connections, weight_matrices)  # .reshape(32,32,12)
         # conv_matrix = np.array(map(lambda x: np.argmax(x), conv_matrix)).reshape(32,32)
-        os.makedirs('{}/convolution'.format(self.path_to_plots))
+        try:
+            os.makedirs('{}/convolution'.format(self.path_to_plots))
+        except OSError as e:
+            print(e)
         for i in range(nc):
             plt.clf()
             conv_label = np.array([item[i] for item in conv_matrix]).reshape(32, 32)
-            fig, ax = plt.subplots()
-            if labels:
-                ax.set_title('Weight convolution for label {}'.format(labels[i]))
-            else:
-                ax.set_title('Weight convolution for label {}'.format(i))
+            fig, ax = plt.subplots(frameon=False, figsize=(5, 5))
+            ax.set_axis_off()
+            if show_title:
+                if labels:
+                    ax.set_title('Weight convolution for label {}'.format(labels[i]))
+                else:
+                    ax.set_title('Weight convolution for label {}'.format(i))
             conv_plot = ax.imshow(conv_label, cmap='PiYG', interpolation='nearest', vmin=-cbar_tick_size,
-                                  vmax=cbar_tick_size)
-            cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
-            cbar.ax.set_yticklabels(['< -{}'.format(cbar_tick_size), '0', '> {}'.format(cbar_tick_size)])
+                                  vmax=cbar_tick_size, aspect='auto')
+            if show_cbar:
+                cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
+                cbar.ax.set_yticklabels(['< -{}'.format(cbar_tick_size), '0', '> {}'.format(cbar_tick_size)])
+            ax.autoscale(False)
+            extent = ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
+
             if save:
-                plt.savefig('{}/convolution/weight_conv_{}.png'.format(self.path_to_plots, time.time()), dpi=300)
+                plt.savefig('{}/convolution/weight_conv_{}.png'.format(self.path_to_plots, labels[i]), dpi=300, bbox_inches=extent)
+                plt.savefig('{}/convolution/weight_conv_{}.pdf'.format(self.path_to_plots, labels[i]), dpi=300, bbox_inches=extent)
             else:
                 plt.show()
             plt.close('all')
