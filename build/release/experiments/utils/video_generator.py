@@ -24,6 +24,8 @@ def parse_args():
                         help='Plot attention window'),
     parser.add_argument('--frame_duration', type=float, default=1. / 60.,
                         help='duration (in second) of integration to generate a frame from events'),
+    parser.add_argument('--last_n_events', type=int, default=0,
+                        help='Generate a frame by integrating the last N events. If 0, events are integrated with respect to frame_duration'),
     parser.add_argument('--center_crop', action='store_true', default=False,
                         help='crop center window'),
     parser.add_argument('--disable_legend', action='store_true', default=False,
@@ -94,7 +96,10 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
             end = max(df.ts)
         print(start, end)
         current_df = df[(df.ts <= end)]
-        current_df = current_df[-event_amount:]
+        if args.last_n_events > 0:
+            current_df = current_df[-args.last_n_events]
+        else:
+            current_df = current_df[(start <= current_df.ts)]
         current_centroid = None
         if attention_window:
             current_centroid = current_df.iloc[-1][['centroid_x', 'centroid_y']]

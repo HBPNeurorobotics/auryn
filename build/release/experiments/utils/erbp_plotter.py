@@ -7,6 +7,7 @@ import jaer_data_handler as jhandler
 import pandas as pd
 from matplotlib.lines import Line2D
 import matplotlib.patches as patches
+import matplotlib.gridspec as gridspec
 import glob
 import os
 
@@ -171,16 +172,20 @@ class Plotter:
             plt.show()
         plt.close('all')
 
-    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path=''):
+    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', xmax=.6, ax=None):
         data_df, seek = fio.ras_to_df(path, start, end)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(5, 3.1))
+
         for i, c in enumerate(classes):
             class_df = data_df.loc[data_df.n_id == i]
-            plt.plot([0] + list(class_df.ts), [0] + list(class_df['n_id'].expanding().count()), label=c)
-        plt.legend(classes)
-        plt.tight_layout()
+            ax.plot([0] + list(class_df.ts), [0] + list(class_df['n_id'].expanding().count()), label=c)
+        ax.legend(classes)
         # plt.title("Aggregated output spikes")
-        plt.xlabel("Time in seconds")
-        plt.ylabel("Number of spikes")
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Output spikes")
+        ax.set_xlim([0, xmax])
+        ax.set_xticks(np.arange(0, xmax+0.1, 0.1))
         if save:
             if not output_path:
                 out_path = self.path_to_plots
@@ -191,93 +196,133 @@ class Plotter:
             plt.savefig('{}/{}'.format(out_path, name), dpi=300)
         else:
             plt.show()
-        plt.clf()
+
+
 
     def plot_ras_spikes(self, pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
-                        save=False, input_att_window=False, att_win_input_size=128 * 2, output_path='',
-                        plot_label=True):
+                        save=False, xmax=0.6, show_xlabel=True, nh1=200, input_size=32*32*2, input_att_window=False, att_win_input_size=128 * 2, output_path='',
+                        plot_label=True, axes=None):
         title = 'Spike times'
-        counter = 1
+        counter = 0
         num_plots = len(layers)
         if 'vis' in layers:
             if plot_label:
                 num_plots += 1
             if input_att_window:
                 num_plots += 1
+        if 'hid' in layers:
+            num_plots += 1
 
+        height_ratios =  np.ones(num_plots)
+        height_ratios[0] = 1.61
+        if axes is None:
+            fig, axes = plt.subplots(nrows=num_plots, ncols=1, sharex='col', sharey=True,
+                                     gridspec_kw={'height_ratios': height_ratios},
+                                     figsize=(5, 3.1))
+
+        latest_spike = xmax
+        markersize = 2.
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
             data_df, seek = fio.ras_to_df(path, start, end)
-            ax1 = plt.subplot(num_plots, 1, counter)
+            # latest_spike = max(latest_spike, data_df.ts.max())
+            width, height = [5, 2]
+            ax1 = axes[counter]
             if counter == 1:
                 pass
                 # ax1.set_title(title)
-            ax1.get_yaxis().set_label_coords(-0.1, 0.5)
+            # ax1.get_yaxis().set_label_coords(-0.1, 0.5)
             if layer == 'vis':
                 label_df = data_df.loc[data_df.n_id >= res]
                 data_df = data_df.loc[data_df.n_id < res]
+
                 if plot_label:
                     for i in xrange(number_of_classes):
                         ax1.plot((start, end), (i, i), 'r--', linewidth=0.1, alpha=1)
                     ax1.plot(label_df.ts.values, label_df.n_id.values - res, linestyle='None', marker=u'|',
                              color=[0, 0, 1, 1],
-                             markersize=1, alpha=0.1)
+                             markersize=markersize, alpha=0.1)
                     ax1.set_ylabel("Label")
                     ax1.xaxis.set_major_locator(plt.NullLocator())
                     counter += 1
-                    x1, x2, y1, y2 = ax1.axis()
-                    ax1.axis((start, end, y1, y2))
+                    ax1.set_xlim(0, latest_spike)
                 if input_att_window:
                     data_neuron_size = res - att_win_input_size
                     att_pos_df = data_df.loc[data_df.n_id >= data_neuron_size]
                     data_df = data_df.loc[data_df.n_id < data_neuron_size]
-                    ax1 = plt.subplot(num_plots, 1, counter, sharex=ax1)
-                    ax1.get_yaxis().set_label_coords(-0.1, 0.5)
+                    ax1 = axes[counter]
+                    # ax1.get_yaxis().set_label_coords(-0.1, 0.5)
                     ax1.plot(att_pos_df.ts.values, att_pos_df.n_id.values, linestyle='None', marker=u',',
                              color=[0, 0, 1, 1])
                     ax1.set_ylabel("Attention")
                     ax1.xaxis.set_major_locator(plt.NullLocator())
                     counter += 1
-                    x1, x2, y1, y2 = ax1.axis()
-                    ax1.axis((start, end, y1, y2))
-                ax1 = plt.subplot(num_plots, 1, counter)
-                ax1.get_yaxis().set_label_coords(-0.1, 0.5)
+                    ax1.set_xlim(0, latest_spike)
+
+                ax1 = axes[counter]
+
+                # ax1.get_yaxis().set_label_coords(-0.1, 0.5)
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.4)
+                         markersize=markersize, alpha=0.4)
                 ax1.set_ylabel("Input")
                 ax1.xaxis.set_major_locator(plt.NullLocator())
+                ax1.axhline(input_size/2, color='black', alpha=.5, linestyle='--')
+                ax1.set_yticks([0, input_size/2, input_size])
+                ax1.set_ylim([0, input_size])
+                ax1.set_xlim(0, latest_spike)
+
             elif layer == 'hid':
-                ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.4)
-                ax1.plot((start, end), (200, 200), 'r--', linewidth=0.5, alpha=1)
-                ax1.set_ylabel("Hidden")
+                hidden_one = data_df[(0 <= data_df.n_id) & (data_df.n_id < nh1)]
+                ax1.plot(hidden_one.ts.values, hidden_one.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
+                         markersize=markersize, alpha=0.4)
+                ax1.set_ylabel("Hidden 1")
+                ax1.set_ylim([0, nh1])
+                ax1.set_yticks([0, nh1/2, nh1])
+                ax1.xaxis.set_major_locator(plt.NullLocator())
+
+                counter += 1
+                ax1 = axes[counter]
+
+                hidden_two = data_df[(nh1 <= data_df.n_id) & (data_df.n_id < (nh1*2))]
+                ax1.plot(hidden_two.ts.values, hidden_two.n_id.values - nh1, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
+                         markersize=markersize, alpha=0.4)
+                ax1.set_ylabel("Hidden 2")
+                ax1.set_ylim([0, nh1])
+                ax1.set_yticks([0, nh1/2, nh1])
+                ax1.set_xlim(0, latest_spike)
 
                 if i != len(layers) - 1:
                     ax1.xaxis.set_major_locator(plt.NullLocator())
             elif layer == 'out':
                 for i in xrange(number_of_classes):
-                    ax1.plot((start, end), (i, i), 'r--', linewidth=0.1, alpha=1)
+                    ax1.axhline(i, color='black', alpha=.5, linestyle='--')
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.2)
+                         markersize=markersize, alpha=0.2)
                 ax1.set_ylabel("Output")
+                ax1.set_xlim(0, latest_spike)
+
             elif layer == 'err1':
                 for i in xrange(number_of_classes):
-                    ax1.plot((start, end), (i, i), 'r--', linewidth=0.1, alpha=1)
+                    ax1.axhline(i, color='black', alpha=.5, linestyle='--')
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
-                         markersize=1, alpha=0.2)
+                         markersize=markersize, alpha=0.2)
                 path = pathinput.format(layer.replace('1', '2'))
                 data_df, seek = fio.ras_to_df(path, start, end)
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[1, 0, 0, 1],
-                         markersize=1, alpha=0.2)
+                         markersize=markersize, alpha=0.2)
                 ax1.set_ylabel("Error")
                 ax1.xaxis.set_major_locator(plt.NullLocator())
+                ax1.set_xlim(0, latest_spike)
+
             # print(data_df.ts.values.size)
             counter += 1
-            x1, x2, y1, y2 = ax1.axis()
-            ax1.axis((start, end, y1, y2))
+            ax1.set_xlim(0, latest_spike)
+        if show_xlabel:
+            ax1.set_xlabel("Time [s]")
+        else:
+            ax1.set_xticks([])
 
-        ax1.set_xlabel("Time in seconds")
-        plt.tight_layout()
+        plt.xlim(0, latest_spike)
 
         if save:
             if not output_path:
@@ -289,7 +334,6 @@ class Plotter:
             plt.savefig('{}/{}'.format(out_path, name), dpi=300)
         else:
             plt.show()
-        plt.clf()
 
     def plot_weight_stats(self, stats, save=False):
         num_subplots = len(stats.keys())
@@ -377,13 +421,15 @@ class Plotter:
         plt.close('all')
 
     def plot_weight_convolution(self, path, nh1, nc, connections=['vh', 'hh', 'ho'], save=False,
-                                cbar_tick_size=5000, labels=[]):
+                                cbar_tick_size=5000, labels=[], show_cbar=False, show_title=False):
         weight_matrices = {}
         for connection in connections:
             weight_matrix = fio.mtx_file_to_matrix(
                 "{path}/fwmat_{connection}.mtx".format(path=path, connection=connection))
             if connection == 'vh':
+                # project to ON or OFF events
                 weight_matrix = weight_matrix[:32 * 32]
+                # weight_matrix = weight_matrix[32 * 32:]
             elif connection == 'hh':
                 weight_matrix = weight_matrix[:, nh1:]
             elif connection == 'ho':
@@ -391,21 +437,31 @@ class Plotter:
             weight_matrices[connection] = weight_matrix
         conv_matrix = self.calc_conv(connections, weight_matrices)  # .reshape(32,32,12)
         # conv_matrix = np.array(map(lambda x: np.argmax(x), conv_matrix)).reshape(32,32)
-        os.makedirs('{}/convolution'.format(self.path_to_plots))
+        try:
+            os.makedirs('{}/convolution'.format(self.path_to_plots))
+        except OSError as e:
+            print(e)
         for i in range(nc):
             plt.clf()
             conv_label = np.array([item[i] for item in conv_matrix]).reshape(32, 32)
-            fig, ax = plt.subplots()
-            if labels:
-                ax.set_title('Weight convolution for label {}'.format(labels[i]))
-            else:
-                ax.set_title('Weight convolution for label {}'.format(i))
+            fig, ax = plt.subplots(frameon=False, figsize=(5, 5))
+            ax.set_axis_off()
+            if show_title:
+                if labels:
+                    ax.set_title('Weight convolution for label {}'.format(labels[i]))
+                else:
+                    ax.set_title('Weight convolution for label {}'.format(i))
             conv_plot = ax.imshow(conv_label, cmap='PiYG', interpolation='nearest', vmin=-cbar_tick_size,
-                                  vmax=cbar_tick_size)
-            cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
-            cbar.ax.set_yticklabels(['< -{}'.format(cbar_tick_size), '0', '> {}'.format(cbar_tick_size)])
+                                  vmax=cbar_tick_size, aspect='auto')
+            if show_cbar:
+                cbar = fig.colorbar(conv_plot, ticks=[-cbar_tick_size, 0, cbar_tick_size])
+                cbar.ax.set_yticklabels(['< -{}'.format(cbar_tick_size), '0', '> {}'.format(cbar_tick_size)])
+            ax.autoscale(False)
+            extent = ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
+
             if save:
-                plt.savefig('{}/convolution/weight_conv_{}.png'.format(self.path_to_plots, time.time()), dpi=300)
+                plt.savefig('{}/convolution/weight_conv_{}.png'.format(self.path_to_plots, labels[i]), dpi=300, bbox_inches=extent)
+                plt.savefig('{}/convolution/weight_conv_{}.pdf'.format(self.path_to_plots, labels[i]), dpi=300, bbox_inches=extent)
             else:
                 plt.show()
             plt.close('all')
