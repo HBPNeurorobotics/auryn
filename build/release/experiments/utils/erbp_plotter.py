@@ -172,7 +172,7 @@ class Plotter:
             plt.show()
         plt.close('all')
 
-    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', xmax=.6, ax=None):
+    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', ax=None):
         data_df, seek = fio.ras_to_df(path, start, end)
         if ax is None:
             fig, ax = plt.subplots(figsize=(5, 3.1))
@@ -184,8 +184,8 @@ class Plotter:
         # plt.title("Aggregated output spikes")
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Output spikes")
-        ax.set_xlim([0, xmax])
-        ax.set_xticks(np.arange(0, xmax+0.1, 0.1))
+        ax.set_xlim([0, end])
+        ax.set_xticks(np.arange(0, end+0.1, 0.1))
         if save:
             if not output_path:
                 out_path = self.path_to_plots
@@ -200,7 +200,7 @@ class Plotter:
 
 
     def plot_ras_spikes(self, pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
-                        save=False, xmax=0.6, show_xlabel=True, nh1=200, input_size=32*32*2, input_att_window=False, att_win_input_size=128 * 2, output_path='',
+                        save=False, show_xlabel=True, nh1=200, input_size=32*32*2, input_att_window=False, att_win_input_size=128 * 2, output_path='',
                         plot_label=True, axes=None):
         title = 'Spike times'
         counter = 0
@@ -220,7 +220,7 @@ class Plotter:
                                      gridspec_kw={'height_ratios': height_ratios},
                                      figsize=(5, 3.1))
 
-        latest_spike = xmax
+        latest_spike = end
         markersize = 2.
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
