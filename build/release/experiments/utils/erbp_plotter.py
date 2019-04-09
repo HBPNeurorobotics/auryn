@@ -174,7 +174,7 @@ class Plotter:
 
     def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', xmax=.6, ax=None):
         data_df, seek = fio.ras_to_df(path, start, end)
-        if ax == None:
+        if ax is None:
             fig, ax = plt.subplots(figsize=(5, 3.1))
 
         for i, c in enumerate(classes):
@@ -185,7 +185,7 @@ class Plotter:
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Output spikes")
         ax.set_xlim([0, xmax])
-        # plt.tight_layout()
+        ax.set_xticks(np.arange(0, xmax+0.1, 0.1))
         if save:
             if not output_path:
                 out_path = self.path_to_plots
@@ -201,7 +201,7 @@ class Plotter:
 
     def plot_ras_spikes(self, pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
                         save=False, xmax=0.6, show_xlabel=True, nh1=200, input_size=32*32*2, input_att_window=False, att_win_input_size=128 * 2, output_path='',
-                        plot_label=True, gs=None):
+                        plot_label=True, axes=None):
         title = 'Spike times'
         counter = 0
         num_plots = len(layers)
@@ -215,9 +215,10 @@ class Plotter:
 
         height_ratios =  np.ones(num_plots)
         height_ratios[0] = 1.61
-        if gs == None:
-            fig = plt.figure(figsize=(5, 3.1))
-            gs = gridspec.GridSpec(num_plots, 1, height_ratios=height_ratios)
+        if axes is None:
+            fig, axes = plt.subplots(nrows=num_plots, ncols=1, sharex='col', sharey=True,
+                                     gridspec_kw={'height_ratios': height_ratios},
+                                     figsize=(5, 3.1))
 
         latest_spike = xmax
         markersize = 2.
@@ -226,7 +227,7 @@ class Plotter:
             data_df, seek = fio.ras_to_df(path, start, end)
             # latest_spike = max(latest_spike, data_df.ts.max())
             width, height = [5, 2]
-            ax1 = plt.subplot(gs[counter])
+            ax1 = axes[counter]
             if counter == 1:
                 pass
                 # ax1.set_title(title)
@@ -244,25 +245,21 @@ class Plotter:
                     ax1.set_ylabel("Label")
                     ax1.xaxis.set_major_locator(plt.NullLocator())
                     counter += 1
-                    x1, x2, y1, y2 = ax1.axis()
-                    ax1.axis((start, end, y1, y2))
                     ax1.set_xlim(0, latest_spike)
                 if input_att_window:
                     data_neuron_size = res - att_win_input_size
                     att_pos_df = data_df.loc[data_df.n_id >= data_neuron_size]
                     data_df = data_df.loc[data_df.n_id < data_neuron_size]
-                    ax1 = plt.subplot(gs[counter])
+                    ax1 = axes[counter]
                     # ax1.get_yaxis().set_label_coords(-0.1, 0.5)
                     ax1.plot(att_pos_df.ts.values, att_pos_df.n_id.values, linestyle='None', marker=u',',
                              color=[0, 0, 1, 1])
                     ax1.set_ylabel("Attention")
                     ax1.xaxis.set_major_locator(plt.NullLocator())
                     counter += 1
-                    x1, x2, y1, y2 = ax1.axis()
-                    ax1.axis((start, end, y1, y2))
                     ax1.set_xlim(0, latest_spike)
 
-                ax1 = plt.subplot(gs[counter])
+                ax1 = axes[counter]
 
                 # ax1.get_yaxis().set_label_coords(-0.1, 0.5)
                 ax1.plot(data_df.ts.values, data_df.n_id.values, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
@@ -284,7 +281,7 @@ class Plotter:
                 ax1.xaxis.set_major_locator(plt.NullLocator())
 
                 counter += 1
-                ax1 = plt.subplot(gs[counter])
+                ax1 = axes[counter]
 
                 hidden_two = data_df[(nh1 <= data_df.n_id) & (data_df.n_id < (nh1*2))]
                 ax1.plot(hidden_two.ts.values, hidden_two.n_id.values - nh1, linestyle='None', marker=u'|', color=[0, 0, 1, 1],
@@ -319,8 +316,7 @@ class Plotter:
 
             # print(data_df.ts.values.size)
             counter += 1
-            x1, x2, y1, y2 = ax1.axis()
-            ax1.axis((start, end, y1, y2))
+            ax1.set_xlim(0, latest_spike)
         if show_xlabel:
             ax1.set_xlabel("Time [s]")
         else:
