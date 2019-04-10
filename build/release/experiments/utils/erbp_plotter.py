@@ -174,8 +174,12 @@ class Plotter:
             plt.show()
         plt.close('all')
 
-    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', ax=None):
+    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', ax=None, translate_x=False):
         data_df, seek = fio.ras_to_df(path, start, end)
+        if translate_x:
+            data_df.ts -= min(data_df.ts)
+            end -= start
+            start = 0
         if ax is None:
             fig, ax = plt.subplots(figsize=(5, 3.1))
 
@@ -201,7 +205,7 @@ class Plotter:
 
     def plot_ras_spikes(self, pathinput, start, end, layers=['vis', 'hid', 'out'], res=sys.maxint, number_of_classes=10,
                         save=False, show_xlabel=True, nh1=200, input_att_window=False,
-                        att_win_input_size=128 * 2, output_path='', plot_label=True, axes=None):
+                        att_win_input_size=128 * 2, output_path='', plot_label=True, axes=None, translate_x=False):
         title = 'Spike times'
         counter = 0
         num_plots = len(layers)
@@ -224,9 +228,15 @@ class Plotter:
                                      figsize=(5, 3.1))
 
         markersize = 2.
+        orig_start = start
+        orig_end = end
         for i, layer in enumerate(layers):
             path = pathinput.format(layer)
-            data_df, seek = fio.ras_to_df(path, start, end)
+            data_df, seek = fio.ras_to_df(path, orig_start, orig_end)
+            if translate_x:
+                data_df.ts -= min(data_df.ts)
+                end -= start
+                start = 0
             # latest_spike = max(latest_spike, data_df.ts.max())
             width, height = [5, 2]
             ax1 = self.getAxis(axes, counter, num_plots)
