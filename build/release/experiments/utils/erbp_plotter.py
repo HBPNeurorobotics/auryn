@@ -174,7 +174,7 @@ class Plotter:
             plt.show()
         plt.close('all')
 
-    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', ax=None, translate_x=False, dash_line_idx=None):
+    def plot_output_spikes_aggregated(self, path, start, end, classes, save=False, output_path='', ax=None, translate_x=False, dash_label=None):
         data_df, seek = fio.ras_to_df(path, start, end)
         if translate_x:
             data_df.ts -= min(data_df.ts)
@@ -187,7 +187,7 @@ class Plotter:
             class_df = data_df.loc[data_df.n_id == i]
 
             linestyle = '-'
-            if dash_line_idx is not None and dash_line_idx==i:
+            if dash_label is not None and dash_label==c:
                 linestyle = '--'
 
             ax.plot([0] + list(class_df.ts), [0] + list(class_df['n_id'].expanding().count()), label=c, linestyle=linestyle)
