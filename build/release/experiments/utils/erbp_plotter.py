@@ -1,16 +1,19 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import sys
 import time
 import file_io as fio
 import jaer_data_handler as jhandler
 import pandas as pd
-from matplotlib.lines import Line2D
-import matplotlib.patches as patches
-import matplotlib.gridspec as gridspec
 import glob
 import os
 import pdb
+import matplotlib
+
+matplotlib.use('Agg')
+from matplotlib.lines import Line2D
+import matplotlib.patches as patches
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 
 
 class Plotter:
