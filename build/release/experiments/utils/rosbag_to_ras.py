@@ -176,7 +176,7 @@ def create_batch_ras(path_to_pkg, exp_dir, data_dir, test_or_train, nc, cache=Tr
     current_timestamp = 0.
     sample_duration_list = []
     with pd.HDFStore(
-            '{path}/scripts/{data_dir}/{test_or_train}_{event_pol}_{down_sample_res}_{attention}attention{attention_window_size}_online{online_att}.h5'.format(
+            '{path}/scripts/data/{data_dir}/{test_or_train}_{event_pol}_{down_sample_res}_{attention}attention{attention_window_size}_online{online_att}.h5'.format(
                 path=path_to_pkg,
                 data_dir=data_dir,
                 exp_dir=exp_dir,
