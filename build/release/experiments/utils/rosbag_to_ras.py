@@ -143,14 +143,22 @@ def create_single_rosbag_ras(exp_dir, path_to_pkg, rosbag_path):
     config = get_config(path_to_pkg)
     att_time_frame, att_win_size, down_sample_res, dvs_res, event_polarity, label_freq, online_median_event_amount, pause_duration_test, pause_duration_train, topics, use_attention_window, use_online_median = read_config(
         config)
-
     ras_path = '{path_to_pkg}/scripts/inputs/{exp_dir}/predict/input.ras'.format(path_to_pkg=path_to_pkg,
                                                                                  exp_dir=exp_dir)
     silentremove(ras_path)
-    input_df, max_neuron_id = get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res,
-                                           event_polarity, rosbag_path,
-                                           online_median_event_amount, topics,
-                                           use_attention_window, use_online_median)
+
+    if 'crop_x' in config.keys() and 'crop_y' in config.keys():
+        crop_y = config['crop_y']
+        crop_x = config['crop_x']
+        input_df, max_neuron_id = get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res,
+                                               event_polarity, rosbag_path,
+                                               online_median_event_amount, topics,
+                                               use_attention_window, use_online_median, crop_x=crop_x, crop_y=crop_y)
+    else:
+        input_df, max_neuron_id = get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res,
+                                               event_polarity, rosbag_path,
+                                               online_median_event_amount, topics,
+                                               use_attention_window, use_online_median)
     assert max(list(input_df.n_id)) < max_neuron_id + 1, '{} > {}'.format(max(list(input_df.n_id)), max_neuron_id)
     write_df_to_ras(input_df, ras_path)
     return input_df.ts.values[-1]
@@ -237,7 +245,7 @@ def get_config(path_to_pkg):
 
 def get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res, event_polarity, path_to_rosbag,
                  online_median_event_amount, topics, use_attention_window,
-                 use_online_median, crop=True):
+                 use_online_median, crop=True, crop_x=35, crop_y=5):
     dfs = []
     max_id_per_cam = 0
     for topic in topics:
@@ -253,9 +261,9 @@ def get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res, event_p
             max_id_per_cam = att_win_size * att_win_size
         elif crop:
             bag_events_df = attention.take_window_events(down_sample_res,
-                                                         pd.DataFrame({'x': [dvs_res / 2 + down_sample_res / 2 - 35] *
-                                                                            bag_events_df.shape[0],
-                                                                       'y': [dvs_res / 2 + down_sample_res / 2 - 5] *
+                                                         pd.DataFrame({'x': [dvs_res / 2 + down_sample_res / 2 - crop_x] *
+                                                                            bag_events_df.shape[1],
+                                                                       'y': [dvs_res / 2 + down_sample_res / 2 - crop_y] *
                                                                             bag_events_df.shape[0]}),
                                                          bag_events_df)
             max_id_per_cam = down_sample_res * down_sample_res
