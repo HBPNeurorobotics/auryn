@@ -226,7 +226,7 @@ class Plotter:
             num_plots += 1
 
         height_ratios = np.ones(num_plots)
-        if plot_label:
+        if plot_label and len(height_ratios) > 1:
             height_ratios[1] = 1.61
         else:
             height_ratios[0] = 1.61
