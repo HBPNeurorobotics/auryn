@@ -14,6 +14,7 @@ import rospy
 import time
 import pdb
 
+import subprocess
 
 def event_to_dict(ev):
     # rospy.logerr(ev)
@@ -39,7 +40,17 @@ def state_to_dict(state):
 def rosbag_to_df(filename, topics, joint_state_topic="/head/joint_states"):
     all_events = []
     joint_states = []
-    with rosbag.Bag(filename, 'r') as bag:
+    try:
+        opened_bag = rosbag.Bag(filename, 'r')
+    except rosbag.ROSBagUnindexedException as e:
+        print('Bag {} is unindexed. Reindexing'.format(filename))
+        reindex_cmd = "rosbag reindex {} -f".format(filename)
+        process = subprocess.Popen(reindex_cmd.split(), stdout=subprocess.PIPE)
+        output, error = process.communicate()
+        print(output, error)
+        opened_bag = rosbag.Bag(filename, 'r')
+
+    with opened_bag as bag:
         bag_topics = bag.get_type_and_topic_info()[1].keys()
         if bag.get_message_count(topics) <= 0:
             raise ValueError('Rosbag {} topic {} is empty.\nPossible topics: {}'
@@ -253,10 +264,11 @@ def get_input_df(att_time_frame, att_win_size, down_sample_res, dvs_res, event_p
                                                                    att_win_size, np.median)
             max_id_per_cam = att_win_size * att_win_size
         elif crop:
+            # translate all events by lower corner address of the attention window
             bag_events_df = attention.take_window_events(down_sample_res,
-                                                         pd.DataFrame({'x': [dvs_res / 2 + down_sample_res / 2] *
+                                                         pd.DataFrame({'x': [dvs_res / 2] *
                                                                             bag_events_df.shape[0],
-                                                                       'y': [dvs_res / 2 + down_sample_res / 2] *
+                                                                       'y': [dvs_res / 2] *
                                                                             bag_events_df.shape[0]}),
                                                          bag_events_df)
             max_id_per_cam = down_sample_res * down_sample_res
