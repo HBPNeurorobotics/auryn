@@ -88,14 +88,23 @@ def get_grouped_n_id(xaddr, yaddr, orig_res, new_res):
     return (yaddr * new_res) + xaddr  # + 1
 
 
-def spike_times_from_ras(ras_path, nvis, nc):
+def spike_times_from_ras(ras_path, nvis, nc, offset = 0):
     df = read_ras_to_df(ras_path)
 
     # the first neurons are input layer (visible), then comes the class neurons
-    input_spike_times = [ (df['ts'][ df['n_id'] == i ] * 1000.).astype(int).tolist() for i in range(nvis)]
-    class_spike_times = [ (df['ts'][ df['n_id'] == i + nvis ] * 1000.).astype(int).tolist() for i in range(nc)]
+    input_spike_times = [ (df['ts'][ df['n_id'] == i ] * 1000. + offset).astype(int).tolist() for i in range(nvis)]
+    class_spike_times = [ (df['ts'][ df['n_id'] == i + nvis ] * 1000. + offset).astype(int).tolist() for i in range(nc)]
 
     return input_spike_times, class_spike_times
+
+
+def read_ras_to_df(ras_path):
+    with open(ras_path, "r") as f:
+        lines = f.readlines()
+        ts_id_list = [ (float(line.split(' ')[0]), int(line.split(' ')[1])) for line in lines]
+        df = pd.DataFrame(ts_id_list, columns = ['ts', 'n_id'])
+    return df
+
 
 def read_ras_to_df(ras_path):
     with open(ras_path, "r") as f:
