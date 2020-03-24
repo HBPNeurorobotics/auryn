@@ -64,9 +64,8 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
         try:
             print('Removing previous h5 cache')
             os.remove(h5_filepath)
-        except FileNotFoundError:
+        except OSError, FileNotFoundError:
             print('No previous h5 cache found')
-            pass
 
     print('loading {} data:'.format(test_or_train))
     with pd.HDFStore(h5_filepath) as store:
