@@ -16,7 +16,7 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
                           event_polarity='on', cache=False, max_neuron_id=32 * 32, delay=0.0, attention_event_amount=1000,
                           attention_window_size=32, input_window_position=False,
                           only_input_position=False, new_pos_weight=0.1,
-                          recurrent=False, no_noise=False, label_frequency=2500):
+                          recurrent=False, no_noise=False, label_frequency=2500, clean_h5file=False):
     filename = "input"
     os.system('rm inputs/{}/{}/{}.ras'.format(exp_directory, test_or_train, filename))
 
@@ -46,20 +46,30 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
     current_timestamp = 0.
     sample_duration_list = []
 
-    print('\nloading {} data:'.format(test_or_train))
-    with pd.HDFStore(
-            'data/{exp_dir}/{test_or_train}_{max_neuron_id}_{event_pol}_{delay}delay_{attention_event_amount}attention{attention_window_size}{input_window_position}_posonly{only_input_position}_{new_pos_weight}new_rec{recurrent}.h5'.format(
-                exp_dir=exp_directory,
-                test_or_train=test_or_train,
-                event_pol=event_polarity,
-                delay=delay,
-                attention_event_amount=attention_event_amount,
-                attention_window_size=attention_window_size,
-                input_window_position=input_window_position,
-                only_input_position=only_input_position,
-                new_pos_weight=new_pos_weight,
-                recurrent=recurrent,
-                max_neuron_id=max_neuron_id)) as store:
+    h5_filepath = 'data/{exp_dir}/{test_or_train}_{max_neuron_id}_{event_pol}_{delay}delay_{attention_event_amount}attention{attention_window_size}{input_window_position}_posonly{only_input_position}_{new_pos_weight}new_rec{recurrent}.h5'.format(
+        exp_dir=exp_directory,
+        test_or_train=test_or_train,
+        event_pol=event_polarity,
+        delay=delay,
+        attention_event_amount=attention_event_amount,
+        attention_window_size=attention_window_size,
+        input_window_position=input_window_position,
+        only_input_position=only_input_position,
+        new_pos_weight=new_pos_weight,
+        recurrent=recurrent,
+        max_neuron_id=max_neuron_id)
+
+    print('\nfilepath for h5 cache: {}'.format(h5_filepath))
+    if clean_h5file:
+        try:
+            print('Removing previous h5 cache')
+            os.remove(h5_filepath)
+        except FileNotFoundError:
+            print('No previous h5 cache found')
+            pass
+
+    print('loading {} data:'.format(test_or_train))
+    with pd.HDFStore(h5_filepath) as store:
         for i, sample_id in enumerate(tqdm(sample_ids)):
             key = 'm{mod}/s{sample_id}'.format(sample_id=sample_id,
                                                mod=sample_id % 10)

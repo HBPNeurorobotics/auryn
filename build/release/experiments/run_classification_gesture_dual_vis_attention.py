@@ -269,7 +269,9 @@ if __name__ == '__main__':
                                                                                'only_input_position'],
                                                                            new_pos_weight=context['new_pos_weight'],
                                                                            recurrent=context['recurrent'],
-                                                                           label_frequency=context['label_frequency'])
+                                                                           label_frequency=context['label_frequency'],
+                                                                           clean_h5file=True
+                                                                           )
             context['simtime_test'] = sample_duration_test[-1]
             print(context['simtime_test'])
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'w+') as simtime_file:
@@ -322,7 +324,8 @@ if __name__ == '__main__':
                                                                                  'only_input_position'],
                                                                              new_pos_weight=context['new_pos_weight'],
                                                                              recurrent=context['recurrent'],
-                                                                             label_frequency=context['label_frequency']
+                                                                             label_frequency=context['label_frequency'],
+                                                                             clean_h5file=(i==start_epoch)
                                                                              )
             print("---- create_ras_from_aedat: execution took {} minutes ----".format(int((time.time() - start_execution_create_ras)//60)))
 

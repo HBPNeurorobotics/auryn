@@ -181,7 +181,8 @@ if __name__ == '__main__':
                                                                            pause_duration=context['sample_pause_test'],
                                                                            event_polarity=context['event_polarity'],
                                                                            cache=True,
-                                                                           max_neuron_id=context['nv'] - context['nc'])
+                                                                           max_neuron_id=context['nv'] - context['nc'],
+                                                                           clean_h5file=True)
             context['simtime_test'] = sample_duration_test[-1]
             print(context['simtime_test'])
             with open('inputs/{directory}/test/simtime.json'.format(**context), 'w+') as simtime_file:
@@ -222,8 +223,8 @@ if __name__ == '__main__':
                                                                                  'sample_pause_train'],
                                                                              event_polarity=context['event_polarity'],
                                                                              cache=True,
-                                                                             max_neuron_id=context['nv'] - context[
-                                                                                 'nc'])
+                                                                             max_neuron_id=context['nv'] - context['nc'],
+                                                                             clean_h5file=(i==0))
             context['simtime_train'] = sample_duration_train[-1]
             print(context['simtime_train'])
             print('New train data : {}\n{}\n{}'.format(n_samples_train, labels_train, sample_duration_train))
