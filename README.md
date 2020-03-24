@@ -78,7 +78,7 @@ Most important files
 License & Copyright (eRBP DVS)
 ---------------------------
 
-Copyright 2017-2019 FZI
+Copyright 2017-2020 FZI
 
 eRBP for DVS processing scripts under Auryn is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
