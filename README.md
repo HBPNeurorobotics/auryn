@@ -39,7 +39,22 @@ If you use this code in your paper, please add the following citation:
 }
 ```
 
-Download Data Sets:
+## Download Data Sets:
+
+- IBM DVS Gesture: http://www.research.ibm.com/dvsgesture/
+    - copy into folder build/release/experiments/data/dvs_gesture
+    - run build/release/experiments/utils/gesture_ds_converter.py
+```bash
+cd build/release/experiments/
+
+# run with covert attention model (re-indexing events with respect to median in time window):
+python2 run_classification_gesture_dual_vis_attention.py
+
+# run with resizing the whole frame:
+python2 run_classification_gesture_dual_vis.py
+```
+
+## Deprecated Data Sets:
 
 - MNIST-DVS: http://www2.imse-cnm.csic.es/caviar/MNISTDVS.html
     - copy into folder build/release/experiments/data/dvs_mnist_saccade
@@ -53,18 +68,7 @@ python2 run_classification_mnist_saccade.py
 cd build/release/experiments/
 python2 run_classification_mnist_flash.py
 ```
-- IBM DVS Gesture: http://www.research.ibm.com/dvsgesture/
-    - copy into folder build/release/experiments/data/dvs_gesture
-    - run build/release/experiments/utils/gesture_ds_converter.py
-```bash
-cd build/release/experiments/
 
-# run with covert attention model (re-indexing events with respect to median in time window):
-python2 run_classification_gesture_dual_vis_attention.py
-
-# run with resizing the whole frame:
-python2 run_classification_gesture_dual_vis.py
-```
 
 Most important files
 --------

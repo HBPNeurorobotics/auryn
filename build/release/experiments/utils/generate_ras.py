@@ -59,13 +59,13 @@ def create_ras_from_aedat(n_samples, exp_directory, test_or_train, labels_name='
         recurrent=recurrent,
         max_neuron_id=max_neuron_id)
 
-    print('\nfilepath for h5 cache: {}'.format(h5_filepath))
+    print('\nfilepath for h5 file: {}'.format(h5_filepath))
     if clean_h5file:
         try:
-            print('Removing previous h5 cache')
+            print('Removing previous h5 file')
             os.remove(h5_filepath)
         except OSError, FileNotFoundError:
-            print('No previous h5 cache found')
+            print('No previous h5 file found')
 
     print('loading {} data:'.format(test_or_train))
     with pd.HDFStore(h5_filepath) as store:

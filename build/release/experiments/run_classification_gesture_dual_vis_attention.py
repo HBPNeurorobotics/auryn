@@ -247,7 +247,8 @@ if __name__ == '__main__':
             os.system('mkdir -p inputs/{directory}/train/'.format(**context))
             elib.create_rbp_init(base_filename='inputs/{directory}/train/fwmat'.format(**context), **context)
 
-        if new_test_data:
+        if new_test_data or not os.path.exists('inputs/{directory}/test/simtime.json'.format(**context)):
+            print("Generating new test data")
             os.system('rm -rf inputs/{directory}/test/'.format(**context))
             os.system('mkdir -p inputs/{directory}/test/'.format(**context))
 
