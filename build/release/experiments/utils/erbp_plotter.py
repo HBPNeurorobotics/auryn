@@ -82,7 +82,7 @@ class Plotter:
                            image_title=image_title, dynamic_v=True)
 
     def plot_2d_events_from_df(self, df, centroid=None, plot_title='', image_title='', hist_shape=(128, 128),
-                               legend=True):
+                               legend=True, **kwargs):
         bucket = np.zeros(hist_shape, dtype=int)
         for event in df.itertuples():
             if event.p == 1:
@@ -93,7 +93,7 @@ class Plotter:
         bucket[bucket < 0] = -1
         self.plot_heat_map(bucket, plot_title, save=True,
                            image_title=image_title, show_cbar=False, vmin=-1, vmax=1,
-                           centroid=centroid, legend=legend)
+                           centroid=centroid, legend=legend, **kwargs)
 
     def plot_2d_events_from_aedat(self, path, start=0, end=sys.maxint, image_title='', version='aedat3',
                                   attention_window=False, event_amount=1000):
@@ -125,7 +125,7 @@ class Plotter:
                 return timestamps
 
     def plot_heat_map(self, bucket, plot_title, save=False, image_title='', show_cbar=True, vmin=0, vmax=10,
-                      dynamic_v=False, centroid=None, attention_window_size=64, legend=True):
+                      dynamic_v=False, centroid=None, attention_window_size=32, legend=True):
         plt.clf()
         fig = plt.figure(frameon=False, figsize=(5, 5))
         ax = plt.Axes(fig, [0., 0., 1., 1.])
@@ -157,7 +157,9 @@ class Plotter:
         extent = ax.get_window_extent().transformed(plt.gcf().dpi_scale_trans.inverted())
 
         if save:
-            plt.savefig('{}/{}.png'.format(self.path_to_plots, image_title), dpi=300, bbox_inches=extent)
+            save_path = '{}/{}.png'.format(self.path_to_plots, image_title)
+            print("saving to {}".format(save_path))
+            plt.savefig(save_path, dpi=300, bbox_inches=extent)
         else:
             plt.show()
         plt.close('all')

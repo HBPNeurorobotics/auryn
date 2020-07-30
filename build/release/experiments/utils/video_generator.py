@@ -105,8 +105,10 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
             current_centroid = current_df.iloc[-1][['centroid_x', 'centroid_y']]
         if center_crop:
             centers = current_df.copy(deep=True)
-            centers.x = 128 / 2 + hist_shape[0] / 2 - 35
-            centers.y = 128 / 2 + hist_shape[0] / 2 - 5
+            centers.x = 128 / 2
+            centers.y = 128 / 2
+            # centers.x = 128 / 2 + hist_shape[0] / 2 - 35
+            # centers.y = 128 / 2 + hist_shape[0] / 2 - 5
             current_df = take_window_events(hist_shape[0], centers, current_df)
         plotter.plot_2d_events_from_df(current_df, centroid=current_centroid,
                                        plot_title='Events from {:0.2f}s to {:.2f}s'.format(start, end),
@@ -121,6 +123,7 @@ def generate_video_from_file(input_path, output_path, aedat_version='aedat3', re
             output=output_path,
             tmp_folder=tmp_folder_pics))
     print('Saved video {}'.format(output_path))
+
     if remove_tmp_pics:
         shutil.rmtree(tmp_folder_pics)
 
